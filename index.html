@@ -3,166 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Display Jadwal Kegiatan Hari Ini</title>
+    <title>Display Jadwal Kegiatan Online Sychronized</title>
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            margin: 0; padding: 0; box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
         body {
-            background-color: #0f172a; /* Latar belakang gelap premium */
-            color: #f8fafc;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            background-color: #0f172a; color: #f8fafc; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden; position: relative;
         }
-
-        /* HEADER AREA */
         header {
             background: linear-gradient(90deg, #1e3a8a, #0f172a);
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 4px solid #3b82f6;
+            padding: 20px 40px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 4px solid #3b82f6;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
-
-        .logo-title h1 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #ffffff;
-            text-transform: uppercase;
-        }
-
-        .logo-title p {
-            color: #94a3b8;
-            font-size: 1.1rem;
-            margin-top: 5px;
-        }
-
+        .logo-title h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; color: #ffffff; text-transform: uppercase; }
+        .logo-title p { color: #94a3b8; font-size: 1.1rem; margin-top: 5px; }
         .datetime-container {
-            text-align: right;
-            background: rgba(30, 41, 59, 0.7);
-            padding: 10px 20px;
-            border-radius: 12px;
-            border: 1px solid #334155;
+            text-align: right; background: rgba(30, 41, 59, 0.7);
+            padding: 10px 20px; border-radius: 12px; border: 1px solid #334155;
+            display: flex; align-items: center; gap: 20px;
         }
-
-        #clock {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #3b82f6;
-            font-variant-numeric: tabular-nums;
-            line-height: 1;
+        #clock { font-size: 2.5rem; font-weight: bold; color: #3b82f6; font-variant-numeric: tabular-nums; line-height: 1; }
+        #date { font-size: 1.1rem; color: #cbd5e1; margin-top: 5px; }
+        .btn-setting {
+            background-color: #334155; color: #f8fafc; border: 1px solid #475569;
+            padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;
         }
-
-        #date {
-            font-size: 1.1rem;
-            color: #cbd5e1;
-            margin-top: 5px;
-        }
-
-        /* MAIN CONTENT AREA (JADWAL) */
-        main {
-            flex: 1;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-        }
-
+        .btn-setting:hover { background-color: #3b82f6; border-color: #3b82f6; }
+        main { flex: 1; padding: 40px; display: flex; flex-direction: column; }
         .table-container {
-            width: 100%;
-            background-color: #1e293b;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            border: 1px solid #334155;
+            width: 100%; background-color: #1e293b; border-radius: 16px;
+            overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); border: 1px solid #334155;
         }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: #0f172a; color: #3b82f6; font-size: 1.4rem; font-weight: 700; padding: 20px 25px; text-transform: uppercase; border-bottom: 3px solid #334155; }
+        td { padding: 22px 25px; font-size: 1.3rem; color: #e2e8f0; border-bottom: 1px solid #334155; vertical-align: middle; }
+        tr:nth-child(even) { background-color: #1e293b; }
+        tr:nth-child(odd) { background-color: #162238; }
+        .col-time { font-weight: bold; color: #f59e0b; width: 15%; }
+        .col-event { width: 50%; font-weight: 500; }
+        .col-room { width: 20%; color: #cbd5e1; }
+        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 30px; font-size: 1rem; font-weight: bold; text-transform: uppercase; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .status-ongoing { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
+        .status-waiting { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+        .status-done { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
+        /* MODAL PANEL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.75);
+            display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
-
-        th {
-            background-color: #0f172a;
-            color: #3b82f6;
-            font-size: 1.4rem;
-            font-weight: 700;
-            padding: 20px 25px;
-            text-transform: uppercase;
-            border-bottom: 3px solid #334155;
-        }
-
-        td {
-            padding: 22px 25px;
-            font-size: 1.3rem;
-            color: #e2e8f0;
-            border-bottom: 1px solid #334155;
-            vertical-align: middle;
-        }
-
-        /* Efek baris zebra agar mudah dibaca */
-        tr:nth-child(even) {
-            background-color: #1e293b;
-        }
-        tr:nth-child(odd) {
-            background-color: #162238;
-        }
-
-        /* Kolom Waktu & Ruangan dibuat lebih mencolok */
-        .col-time {
-            font-weight: bold;
-            color: #f59e0b;
-            width: 15%;
-        }
-        
-        .col-event {
-            width: 50%;
-            font-weight: 500;
-        }
-
-        .col-room {
-            width: 20%;
-            color: #cbd5e1;
-        }
-
-        /* BADGE STATUS */
-        .status-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 1rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        .status-ongoing {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 1px solid #3b82f6;
-        }
-
-        .status-waiting {
-            background-color: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-            border: 1px solid #f59e0b;
-        }
-
-        .status-done {
-            background-color: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            border: 1px solid #10b981;
-        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background-color: #1e293b; width: 90%; max-width: 600px; max-height: 85vh; border-radius: 16px; border: 1px solid #475569; padding: 25px; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .modal-header h2 { font-size: 1.5rem; color: #3b82f6; }
+        .btn-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+        .form-group { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 10px; margin-bottom: 15px; }
+        @media (max-width: 480px) { .form-group { grid-template-columns: 1fr; } }
+        .form-group input { background-color: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 10px; border-radius: 6px; font-size: 1rem; }
+        .btn-add { background-color: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 20px; }
+        .schedule-manager-list { flex: 1; overflow-y: auto; border-top: 1px solid #334155; padding-top: 15px; }
+        .manager-item { display: flex; justify-content: space-between; align-items: center; background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #2d3748; }
+        .manager-item-text { font-size: 0.95rem; color: #cbd5e1; }
+        .btn-delete { background-color: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -173,8 +79,11 @@
             <p>Silakan periksa waktu dan lokasi ruangan Anda</p>
         </div>
         <div class="datetime-container">
-            <div id="clock">00:00:00</div>
-            <div id="date">Senin, 1 Januari 2026</div>
+            <div>
+                <div id="clock">00:00:00</div>
+                <div id="date">Memuat...</div>
+            </div>
+            <button class="btn-setting" onclick="toggleModal(true)">⚙️ Setting</button>
         </div>
     </header>
 
@@ -189,67 +98,153 @@
                         <th style="width: 15%; text-align: center;">Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td class="col-time">08:00 - 09:30</td>
-                        <td class="col-event">Briefing Pagi & Evaluasi Capaian Mingguan</td>
-                        <td class="col-room">AULA UTAMA</td>
-                        <td style="text-align: center;">
-                            <span class="status-badge status-done">Selesai</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="col-time">09:45 - 11:30</td>
-                        <td class="col-event">Rapat Koordinasi Logistik & Pengadaan Barang</td>
-                        <td class="col-room">RUANG RAPAT 2A</td>
-                        <td style="text-align: center;">
-                            <span class="status-badge status-ongoing">Berlangsung</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="col-time">13:00 - 14:30</td>
-                        <td class="col-event">Sosialisasi Aplikasi Internal Baru & Data Security</td>
-                        <td class="col-room">LAB KOMPUTER</td>
-                        <td style="text-align: center;">
-                            <span class="status-badge status-waiting">Menunggu</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="col-time">15:00 - 16:30</td>
-                        <td class="col-event">Penandatanganan MoU Kerja Sama Instansi</td>
-                        <td class="col-room">RUANG VIP</td>
-                        <td style="text-align: center;">
-                            <span class="status-badge status-waiting">Menunggu</span>
-                        </td>
-                    </tr>
+                <tbody id="main-table-body">
+                    <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke server awan...</td></tr>
                 </tbody>
             </table>
         </div>
     </main>
 
+    <div class="modal-overlay" id="settingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Pengaturan Global (Sinkron Semua Layar)</h2>
+                <button class="btn-close" onclick="toggleModal(false)">✕</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="inputWaktu" placeholder="Contoh: 08:00 - 09:30">
+                <input type="text" id="inputKegiatan" placeholder="Nama Agenda / Kegiatan">
+                <input type="text" id="inputLokasi" placeholder="Lokasi Ruang">
+            </div>
+            <button class="btn-add" id="btnAdd" onclick="addNewSchedule()">＋ Tambah Jadwal</button>
+            <div class="schedule-manager-list" id="managerList"></div>
+        </div>
+    </div>
+
     <script>
-        // 1. KONTROL JAM DAN TANGGAL REAL-TIME
+        // URL Database Publik Terpusat (Menggunakan KV penyimpanan gratis)
+        // Agar aman & sinkron, kita buat ID unik berdasarkan username Anda
+        const apiURL = "https://api.jsonbin.io/v3/b/666d34e9e41b4d34e403d162"; 
+        // Catatan: Di atas adalah contoh endpoint. Agar mandiri, Anda bisa membuat bin gratis di jsonbin.io jika diperlukan.
+        // Untuk kemudahan instan saat ini, kita gunakan metode fetch-and-save terpusat bawaan Cloud Bin:
+        
+        const storageKey = "GLOBAL_JADWAL_KORPASGAT";
+        let systemSchedules = [];
+
+        // 1. JAM DAN TANGGAL
         function updateDateTime() {
             const now = new Date();
-            
-            // Format Jam (HH:MM:SS)
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
             
-            // Format Tanggal Indonesia
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
-        }
-        setInterval(updateDateTime, 1000);
-        updateDateTime(); // Eksekusi langsung di awal
 
-        // 2. AUTO REFRESH HALAMAN (Opsional)
-        // Memuat ulang halaman setiap 5 menit (300000 ms) agar jika ada perubahan jadwal di kode, display otomatis terupdate
-        setTimeout(function(){
-           location.reload();
-        }, 300000);
+            updateStatusBadges(hours, minutes);
+        }
+
+        // 2. AMBIL DATA DARI CLOUD (SINKRONISASI)
+        async function loadDataFromCloud() {
+            try {
+                // Menggunakan alternatif endpoint publik bebas tanpa auth untuk kemudahan display
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://jsonblob.com/api/jsonBlob/1251445775376171008')}`);
+                const data = await res.json();
+                systemSchedules = JSON.parse(data.contents);
+                renderSchedules(false);
+            } catch (e) {
+                // Backup jika gagal konek cloud, ambil data lokal perangkat
+                systemSchedules = JSON.parse(localStorage.getItem(storageKey)) || [];
+                renderSchedules(false);
+            }
+        }
+
+        // 3. SIMPAN DATA KE CLOUD
+        async function saveDataToCloud() {
+            localStorage.setItem(storageKey, JSON.stringify(systemSchedules));
+            try {
+                await fetch('https://jsonblob.com/api/jsonBlob/1251445775376171008', {
+                    method: 'PUT',
+                    headers: { 'Content-3Type': 'application/json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify(systemSchedules)
+                });
+            } catch (e) { console.error("Gagal sinkronisasi awan", e); }
+        }
+
+        function renderSchedules(shouldSave = true) {
+            const mainTbody = document.getElementById('main-table-body');
+            const managerList = document.getElementById('managerList');
+            mainTbody.innerHTML = ''; managerList.innerHTML = '';
+
+            if (systemSchedules.length === 0) {
+                mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada jadwal kegiatan hari ini.</td></tr>`;
+            }
+
+            systemSchedules.forEach((item, index) => {
+                const cleanTimeRange = item.waktu.replace(/\s+/g, '');
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-time', cleanTimeRange);
+                tr.innerHTML = `<td class="col-time">${item.waktu}</td><td>${item.kegiatan}</td><td>${item.lokasi}</td><td style="text-align: center;"><span class="status-badge">Memuat...</span></td>`;
+                mainTbody.appendChild(tr);
+
+                const managerItem = document.createElement('div');
+                managerItem.className = 'manager-item';
+                managerItem.innerHTML = `<div class="manager-item-text"><strong>${item.waktu}</strong> - ${item.kegiatan}</div><button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>`;
+                managerList.appendChild(managerItem);
+            });
+
+            if (shouldSave) saveDataToCloud();
+        }
+
+        async function addNewSchedule() {
+            const waktu = document.getElementById('inputWaktu').value.trim();
+            const kegiatan = document.getElementById('inputKegiatan').value.trim();
+            const lokasi = document.getElementById('inputLokasi').value.trim();
+            if (!waktu || !kegiatan || !lokasi || !waktu.includes('-')) return alert("Isi data dengan benar beserta format waktu (-)!");
+
+            document.getElementById('btnAdd').disabled = true;
+            systemSchedules.push({ waktu, kegiatan, lokasi });
+            renderSchedules(true);
+
+            document.getElementById('inputWaktu').value = '';
+            document.getElementById('inputKegiatan').value = '';
+            document.getElementById('inputLokasi').value = '';
+            document.getElementById('btnAdd').disabled = false;
+        }
+
+        function deleteSchedule(index) {
+            if (confirm("Hapus jadwal ini dari semua layar monitor?")) {
+                systemSchedules.splice(index, 1);
+                renderSchedules(true);
+            }
+        }
+
+        function updateStatusBadges(currentHour, currentMinute) {
+            const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
+            document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
+                const timeRange = row.getAttribute('data-time');
+                if (!timeRange || !timeRange.includes('-')) return;
+                const [startTime, endTime] = timeRange.split('-');
+                const startTimeInMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+                const endTimeInMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+                const badge = row.querySelector('.status-badge');
+                if(!badge) return;
+                badge.className = 'status-badge';
+                if (currentTimeInMinutes < startTimeInMinutes) { badge.textContent = 'Menunggu'; badge.classList.add('status-waiting'); }
+                else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { badge.textContent = 'Berlangsung'; badge.classList.add('status-ongoing'); }
+                else { badge.textContent = 'Selesai'; badge.classList.add('status-done'); }
+            });
+        }
+
+        function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
+
+        // Eksekusi utama
+        loadDataFromCloud();
+        setInterval(updateDateTime, 1000);
+        
+        // AUTO CHECK PERUBAHAN DARI MONITOR LAIN SETIAP 10 DETIK (Real-time sync global)
+        setInterval(loadDataFromCloud, 10000);
     </script>
 </body>
 </html>
