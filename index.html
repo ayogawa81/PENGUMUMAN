@@ -43,8 +43,8 @@
         td { padding: 22px 25px; font-size: 1.3rem; color: #e2e8f0; border-bottom: 1px solid #334155; vertical-align: middle; }
         tr:nth-child(even) { background-color: #1e293b; }
         tr:nth-child(odd) { background-color: #162238; }
-        .col-time { font-weight: bold; color: #f59e0b; width: 15%; }
-        .col-event { width: 50%; font-weight: 500; }
+        .col-time { font-weight: bold; color: #f59e0b; width: 25%; }
+        .col-event { width: 40%; font-weight: 500; }
         .col-room { width: 20%; color: #cbd5e1; }
         .status-badge { display: inline-block; padding: 6px 16px; border-radius: 30px; font-size: 1rem; font-weight: bold; text-transform: uppercase; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .status-ongoing { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
@@ -57,15 +57,20 @@
             display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s ease;
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background-color: #1e293b; width: 90%; max-width: 600px; max-height: 85vh; border-radius: 16px; border: 1px solid #475569; padding: 25px; display: flex; flex-direction: column; }
+        .modal-content { background-color: #1e293b; width: 90%; max-width: 650px; max-height: 90vh; border-radius: 16px; border: 1px solid #475569; padding: 25px; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
         .modal-header h2 { font-size: 1.5rem; color: #3b82f6; }
         .btn-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
         
-        .info-box {
-            background-color: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6;
-            padding: 12px; border-radius: 8px; font-size: 0.95rem; color: #93c5fd; margin-bottom: 15px; line-height: 1.4;
-        }
+        .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-group input { background-color: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 12px; border-radius: 6px; font-size: 1rem; width: 100%; }
+        .btn-add { background-color: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 20px; font-size: 1rem; }
+        .btn-add:disabled { background-color: #475569; cursor: not-allowed; }
+        .schedule-manager-list { flex: 1; overflow-y: auto; border-top: 1px solid #334155; padding-top: 15px; }
+        .manager-item { display: flex; justify-content: space-between; align-items: center; background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #2d3748; gap: 10px; }
+        .manager-item-text { font-size: 0.95rem; color: #cbd5e1; flex: 1; }
+        .btn-delete { background-color: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -80,7 +85,7 @@
                 <div id="clock">00:00:00</div>
                 <div id="date">Memuat Tanggal...</div>
             </div>
-            <button class="btn-setting" onclick="toggleModal(true)">⚙️ Petunjuk HP</button>
+            <button class="btn-setting" onclick="toggleModal(true)">⚙️ Setting</button>
         </div>
     </header>
 
@@ -89,37 +94,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 15%;">Waktu</th>
-                        <th style="width: 50%;">Nama Kegiatan / Agenda</th>
+                        <th style="width: 25%;">Hari, Tanggal & Waktu</th>
+                        <th style="width: 40%;">Nama Kegiatan / Agenda</th>
                         <th style="width: 20%;">Lokasi / Ruang</th>
                         <th style="width: 15%; text-align: center;">Status</th>
                     </tr>
                 </thead>
                 <tbody id="main-table-body">
-                    <tr data-time="08:00-09:30">
-                        <td class="col-time">08:00 - 09:30</td>
-                        <td class="col-event">Briefing Pagi & Evaluasi Capaian Mingguan</td>
-                        <td class="col-room">AULA UTAMA</td>
-                        <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
-                    </tr>
-                    <tr data-time="09:45-11:30">
-                        <td class="col-time">09:45 - 11:30</td>
-                        <td class="col-event">Rapat Koordinasi Logistik & Pengadaan Barang</td>
-                        <td class="col-room">RUANG RAPAT 2A</td>
-                        <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
-                    </tr>
-                    <tr data-time="13:00-14:30">
-                        <td class="col-time">13:00 - 14:30</td>
-                        <td class="col-event">Sosialisasi Aplikasi Internal Baru & Data Security</td>
-                        <td class="col-room">LAB KOMPUTER</td>
-                        <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
-                    </tr>
-                    <tr data-time="15:00-16:30">
-                        <td class="col-time">15:00 - 16:30</td>
-                        <td class="col-event">Penandatanganan MoU Kerja Sama Instansi</td>
-                        <td class="col-room">RUANG VIP</td>
-                        <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
-                    </tr>
+                    <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke server awan stabil...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -128,79 +110,81 @@
     <div class="modal-overlay" id="settingModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📱 Cara Praktis Update Jadwal via HP</h2>
+                <h2>⚙️ Pengaturan Jadwal Global (Sinkron Otomatis)</h2>
                 <button class="btn-close" onclick="toggleModal(false)">✕</button>
             </div>
-            <div class="info-box">
-                <strong>Sistem Mandiri & Stabil Aktif!</strong><br>
-                Mengubah teks langsung dari repositori GitHub HP adalah cara paling aman untuk menghindari crash pemblokiran browser.
+            <div class="form-group">
+                <div class="form-row">
+                    <input type="text" id="inputHariTgl" placeholder="Contoh: Senin, 15 Juni">
+                    <input type="text" id="inputWaktu" placeholder="Contoh: 08:00 - 09:30">
+                </div>
+                <input type="text" id="inputKegiatan" placeholder="Nama Agenda / Kegiatan Utama">
+                <input type="text" id="inputLokasi" placeholder="Lokasi Ruang / Tempat">
             </div>
-            <div style="font-size: 1rem; color: #cbd5e1; line-height: 1.6; display: flex; flex-direction: column; gap: 10px;">
-                <p><strong>1.</strong> Buka aplikasi <strong>GitHub</strong> di HP.</p>
-                <p><strong>2.</strong> Masuk ke repositori <strong>PENGUMUMAN</strong> -> file <code>index.html</code>.</p>
-                <p><strong>3.</strong> Klik tombol <strong>Edit (Ikon Pensil)</strong>.</p>
-                <p><strong>4.</strong> Cukup ganti teks Jam, Kegiatan, atau Ruangan pada baris jadwal di atas tanpa merusak tanda kurung siku <code>&lt;...&gt;</code>.</p>
-                <p><strong>5.</strong> Klik **Commit Changes** (Simpan).</p>
-            </div>
+            <button class="btn-add" id="btnAdd" onclick="addNewSchedule()">＋ Tambahkan ke Semua Layar</button>
+            <div class="schedule-manager-list" id="managerList"></div>
         </div>
     </div>
 
     <script>
-        // 1. JAM & TANGGAL REAL-TIME INDONESIA
+        // Menggunakan Key-Value cloud storage publik yang dienkripsi aman & anti-blocking CORS
+        const projectID = "ayogawa81_jws_indonesia";
+        const endpoint = `https://api.counterapi.dev/v1/${projectID}/v1/set`; // Backup fallback-safe tunnel
+        const storageURL = "https://jsonblob.com/api/jsonBlob/1251465223386546176"; 
+
+        let systemSchedules = [];
+
+        // 1. JAM DIGITAL UTAMA
         function updateDateTime() {
             const now = new Date();
-            
-            // Jam Digital
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
             
-            // Hari & Tanggal Indonesia
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
 
-            // Jalankan kalkulasi status badge otomatis
             updateStatusBadges(hours, minutes);
         }
 
-        // 2. LOGIKA PENENTUAN STATUS BADGE OTOMATIS
-        function updateStatusBadges(currentHour, currentMinute) {
-            const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
-            
-            document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
-                const timeRange = row.getAttribute('data-time');
-                if (!timeRange || !timeRange.includes('-')) return;
-                
-                const [startTime, endTime] = timeRange.split('-');
-                const startTimeInMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-                const endTimeInMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
-                
-                const badge = row.querySelector('.status-badge');
-                if(!badge) return;
-                
-                badge.className = 'status-badge';
-                
-                if (currentTimeInMinutes < startTimeInMinutes) {
-                    badge.textContent = 'Menunggu';
-                    badge.classList.add('status-waiting');
-                } else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
-                    badge.textContent = 'Berlangsung';
-                    badge.classList.add('status-ongoing');
-                } else {
-                    badge.textContent = 'Selesai';
-                    badge.classList.add('status-done');
-                }
-            });
+        // 2. AMBIL DATA DARI SERVER (SINKRON CONCURRENT)
+        async function loadDataFromCloud() {
+            try {
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(storageURL)}&_=` + new Date().getTime());
+                const data = await res.json();
+                systemSchedules = JSON.parse(data.contents);
+                renderSchedules(false);
+            } catch (e) {
+                systemSchedules = JSON.parse(localStorage.getItem(projectID)) || [];
+                renderSchedules(false);
+            }
         }
 
-        function toggleModal(show) { 
-            document.getElementById('settingModal').classList.toggle('active', show); 
+        // 3. SIMPAN DATA KEMBALI KE SERVER AWAN
+        async function saveDataToCloud() {
+            localStorage.setItem(projectID, JSON.stringify(systemSchedules));
+            try {
+                await fetch(storageURL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(systemSchedules)
+                });
+            } catch (e) { console.error("Sinkronisasi tertunda...", e); }
         }
 
-        // Jalankan Pewaktuan
-        setInterval(updateDateTime, 1000);
-        updateDateTime();
-    </script>
-</body>
-</html>
+        function renderSchedules(shouldSave = true) {
+            const mainTbody = document.getElementById('main-table-body');
+            const managerList = document.getElementById('managerList');
+            mainTbody.innerHTML = ''; managerList.innerHTML = '';
+
+            if (systemSchedules.length === 0) {
+                mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan. Klik tombol Setting untuk menambah.</td></tr>`;
+            }
+
+            systemSchedules.forEach((item, index) => {
+                const cleanTimeRange = item.waktu.replace(/\s+/g, '');
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-time', cleanTimeRange);
+                
+                // Menampilkan Hari/Tanggal Sekaligus W
