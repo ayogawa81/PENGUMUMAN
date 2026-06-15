@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Jadwal Kegiatan Hari Ini</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a; /* Latar belakang gelap premium */
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER AREA */
+        header {
+            background: linear-gradient(90deg, #1e3a8a, #0f172a);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #3b82f6;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-title h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        .logo-title p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-top: 5px;
+        }
+
+        .datetime-container {
+            text-align: right;
+            background: rgba(30, 41, 59, 0.7);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        #clock {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        #date {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-top: 5px;
+        }
+
+        /* MAIN CONTENT AREA (JADWAL) */
+        main {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            width: 100%;
+            background-color: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #0f172a;
+            color: #3b82f6;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 20px 25px;
+            text-transform: uppercase;
+            border-bottom: 3px solid #334155;
+        }
+
+        td {
+            padding: 22px 25px;
+            font-size: 1.3rem;
+            color: #e2e8f0;
+            border-bottom: 1px solid #334155;
+            vertical-align: middle;
+        }
+
+        /* Efek baris zebra agar mudah dibaca */
+        tr:nth-child(even) {
+            background-color: #1e293b;
+        }
+        tr:nth-child(odd) {
+            background-color: #162238;
+        }
+
+        /* Kolom Waktu & Ruangan dibuat lebih mencolok */
+        .col-time {
+            font-weight: bold;
+            color: #f59e0b;
+            width: 15%;
+        }
+        
+        .col-event {
+            width: 50%;
+            font-weight: 500;
+        }
+
+        .col-room {
+            width: 20%;
+            color: #cbd5e1;
+        }
+
+        /* BADGE STATUS */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .status-ongoing {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
+        .status-waiting {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid #f59e0b;
+        }
+
+        .status-done {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-title">
+            <h1>JADWAL KEGIATAN & AGENDA UTAMA</h1>
+            <p>Silakan periksa waktu dan lokasi ruangan Anda</p>
+        </div>
+        <div class="datetime-container">
+            <div id="clock">00:00:00</div>
+            <div id="date">Senin, 1 Januari 2026</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Waktu</th>
+                        <th style="width: 50%;">Nama Kegiatan / Agenda</th>
+                        <th style="width: 20%;">Lokasi / Ruang</th>
+                        <th style="width: 15%; text-align: center;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-time">08:00 - 09:30</td>
+                        <td class="col-event">Briefing Pagi & Evaluasi Capaian Mingguan</td>
+                        <td class="col-room">AULA UTAMA</td>
+                        <td style="text-align: center;">
+                            <span class="status-badge status-done">Selesai</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-time">09:45 - 11:30</td>
+                        <td class="col-event">Rapat Koordinasi Logistik & Pengadaan Barang</td>
+                        <td class="col-room">RUANG RAPAT 2A</td>
+                        <td style="text-align: center;">
+                            <span class="status-badge status-ongoing">Berlangsung</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-time">13:00 - 14:30</td>
+                        <td class="col-event">Sosialisasi Aplikasi Internal Baru & Data Security</td>
+                        <td class="col-room">LAB KOMPUTER</td>
+                        <td style="text-align: center;">
+                            <span class="status-badge status-waiting">Menunggu</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-time">15:00 - 16:30</td>
+                        <td class="col-event">Penandatanganan MoU Kerja Sama Instansi</td>
+                        <td class="col-room">RUANG VIP</td>
+                        <td style="text-align: center;">
+                            <span class="status-badge status-waiting">Menunggu</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // 1. KONTROL JAM DAN TANGGAL REAL-TIME
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format Jam (HH:MM:SS)
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            // Format Tanggal Indonesia
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Eksekusi langsung di awal
+
+        // 2. AUTO REFRESH HALAMAN (Opsional)
+        // Memuat ulang halaman setiap 5 menit (300000 ms) agar jika ada perubahan jadwal di kode, display otomatis terupdate
+        setTimeout(function(){
+           location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>
