@@ -259,12 +259,21 @@
         }
 
         // HITUNG STATUS BADGE OTOMATIS
+       // HITUNG STATUS BADGE OTOMATIS (VERSI PERBAIKAN LOGIKA TANGGAL)
         function updateStatusBadges(currentHour, currentMinute) {
+            const now = new Date();
             const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
             
+            // Ambil nama hari ini dalam bahasa Indonesia untuk validasi kecocokan hari
+            const opsiHari = { weekday: 'long' };
+            const namaHariIni = now.toLocaleDateString('id-ID', opsiHari); // Hasil: "Rabu", "Kamis", dll.
+
             document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
                 const timeRange = row.getAttribute('data-time');
                 if (!timeRange || !timeRange.includes('-')) return;
+
+                // Ambil text Hari/Tanggal dari kolom pertama baris ini
+                const colTimeText = row.querySelector('.col-time div').textContent || '';
                 
                 const cleanTimeRange = timeRange.replace(/\./g, ':');
                 const [startTime, endTime] = cleanTimeRange.split('-');
@@ -276,18 +285,26 @@
                 if(!badge) return;
                 badge.className = 'status-badge';
                 
-                if (currentTimeInMinutes < startTimeInMinutes) { 
-                    badge.textContent = 'Menunggu'; badge.className = 'status-badge status-waiting'; 
+                // 1. JIKA JADWAL BUKAN HARI INI
+                if (colTimeText && !colTimeText.toLowerCase().includes(namaHariIni.toLowerCase())) {
+                    // Karena ini aplikasi display agenda terdekat, asumsikan hari yang berbeda adalah agenda mendatang
+                    badge.textContent = 'Menunggu'; 
+                    badge.className = 'status-badge status-waiting';
                 } 
-                else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { 
-                    badge.textContent = 'Berlangsung'; badge.className = 'status-badge status-ongoing'; 
-                } 
-                else { 
-                    badge.textContent = 'Selesai'; badge.className = 'status-badge status-done'; 
+                // 2. JIKA JADWAL ADALAH HARI INI, JALANKAN LOGIKA JAM
+                else {
+                    if (currentTimeInMinutes < startTimeInMinutes) { 
+                        badge.textContent = 'Menunggu'; badge.className = 'status-badge status-waiting'; 
+                    } 
+                    else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { 
+                        badge.textContent = 'Berlangsung'; badge.className = 'status-badge status-ongoing'; 
+                    } 
+                    else { 
+                        badge.textContent = 'Selesai'; badge.className = 'status-badge status-done'; 
+                    }
                 }
             });
         }
-
         function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
 
         // EKSEKUSI INTERVAL JALAN UTAMA
