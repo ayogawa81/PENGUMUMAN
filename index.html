@@ -127,35 +127,38 @@
     </div>
 
     <script>
-        // KONEKSI INTERNAL GITHUB REPOSITORY (ANTI-BLOCK)
+        // KONEKSI INTERNAL GITHUB REPOSITORY
         const OWNER = "ayogawa81";
         const REPO = "PENGUMUMAN";
         const FILE_PATH = "data.json";
-        // Masukkan Personal Access Token GitHub Anda di bawah ini:
-        const TOKEN = "ISI_TOKEN_GITHUB_ANDA_DISINI"; 
+        
+        // =========================================================================
+        // TEMPELKAN TOKEN CLASSIK GITHUB ANDA DI SINI:
+        const TOKEN = "ghp_TEMPELKAN_TOKEN_ANDA_DI_SINI"; 
+        // =========================================================================
 
         const apiURL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
         let systemSchedules = [];
         let fileSHA = "";
+        let currentHours = "00";
+        let currentMinutes = "00";
 
         function updateDateTime() {
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            currentHours = String(now.getHours()).padStart(2, '0');
+            currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${currentHours}:${currentMinutes}:${String(now.getSeconds()).padStart(2, '0')}`;
             
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
 
-            updateStatusBadges(hours, minutes);
+            updateStatusBadges(currentHours, currentMinutes);
         }
 
-        // AMBIL DATA REPO INTERNAL
         async function loadDataFromCloud() {
             try {
                 const res = await fetch(`${apiURL}?_=${new Date().getTime()}`, {
-                    headers: TOKEN !== "ISI_TOKEN_GITHUB_ANDA_DISINI" ? { "Authorization": `token ${TOKEN}` } : {}
+                    headers: TOKEN !== "ISI_TOKEN_GITHUB_ANDA_DISINI" && TOKEN !== "ghp_TEMPELKAN_TOKEN_ANDA_DI_SINI" ? { "Authorization": `token ${TOKEN}` } : {}
                 });
                 if (!res.ok) throw new Error();
                 const data = await res.json();
@@ -163,16 +166,14 @@
                 systemSchedules = JSON.parse(atob(data.content));
                 renderSchedules(false);
             } catch (e) {
-                // Fallback jika token belum diisi / offline, membaca data statis lokal cache
                 systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
                 renderSchedules(false);
             }
         }
 
-        // SIMPAN DATA KEMBALI KE REPO INTERNAL VIA API
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
-            if (TOKEN === "ISI_TOKEN_GITHUB_ANDA_DISINI") return;
+            if (TOKEN === "ISI_TOKEN_GITHUB_ANDA_DISINI" || TOKEN === "ghp_TEMPELKAN_TOKEN_ANDA_DI_SINI") return;
 
             try {
                 await fetch(apiURL, {
@@ -187,7 +188,6 @@
                         sha: fileSHA
                     })
                 });
-                // Ambil ulang data agar mendapatkan SHA terbaru
                 setTimeout(loadDataFromCloud, 2000);
             } catch (e) { console.error("Gagal sinkronisasi repo", e); }
         }
@@ -260,32 +260,23 @@
             }
         }
 
-      function updateStatusBadges(currentHour, currentMinute) {
+        function updateStatusBadges(currentHour, currentMinute) {
             const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
             
             document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
                 const timeRange = row.getAttribute('data-time');
                 if (!timeRange || !timeRange.includes('-')) return;
                 
-                // Mengubah titik (.) menjadi titik dua (:) agar format pembacaan seragam
                 const cleanTimeRange = timeRange.replace(/\./g, ':');
                 const [startTime, endTime] = cleanTimeRange.split('-');
                 
-                // Parsing jam dan menit secara aman
-                const startHour = parseInt(startTime.split(':')[0]) || 0;
-                const startMinute = parseInt(startTime.split(':')[1]) || 0;
-                const endHour = parseInt(endTime.split(':')[0]) || 0;
-                const endMinute = parseInt(endTime.split(':')[1]) || 0;
-                
-                const startTimeInMinutes = startHour * 60 + startMinute;
-                const endTimeInMinutes = endHour * 60 + endMinute;
+                const startTimeInMinutes = (parseInt(startTime.split(':')[0]) || 0) * 60 + (parseInt(startTime.split(':')[1]) || 0);
+                const endTimeInMinutes = (parseInt(endTime.split(':')[0]) || 0) * 60 + (parseInt(endTime.split(':')[1]) || 0);
                 
                 const badge = row.querySelector('.status-badge');
                 if(!badge) return;
-                
                 badge.className = 'status-badge';
                 
-                // Penentuan status logika waktu
                 if (currentTimeInMinutes < startTimeInMinutes) { 
                     badge.textContent = 'Menunggu'; 
                     badge.classList.add('status-waiting'); 
@@ -303,12 +294,11 @@
 
         function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
 
-        // Loop internal
         loadDataFromCloud();
         setInterval(updateDateTime, 1000);
         updateDateTime();
         
-        // Cek update otomatis ke file repo sendiri setiap 15 detik (Aman dari pembatasan CORS)
+        // Refresh otomatis setiap 15 detik
         setInterval(loadDataFromCloud, 15000);
     </script>
 </body>
