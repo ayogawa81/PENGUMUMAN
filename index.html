@@ -127,14 +127,14 @@
     </div>
 
     <script>
-        // DATABASE GLOBAL ONLINE (Bebas Blokir, Stabil, Auto-Sync)
-        const dbURL = "https://api.v0.myjson.online/v1/records/48e0c8da-5ea5-4927-b50a-f111075306cd";
+        // PENTING: GANTI teks di bawah ini dengan URL api.npoint.io hasil Langkah 1 Anda!
+        const dbURL = "https://api.npoint.io/79fb87bf4e7964927964";
         
         let systemSchedules = [];
         let currentHours = "00";
         let currentMinutes = "00";
 
-        // 1. REALTIME CLOCK & DATE
+        // JAM REALTIME
         function updateDateTime() {
             try {
                 const now = new Date();
@@ -150,38 +150,37 @@
             } catch(err) { console.error(err); }
         }
 
-        // 2. KONEKSI & AMBIL DATA DARI DATABASE ONLINE
+        // BACA DATA DARI CLOUD
         async function loadDataFromCloud() {
             try {
                 const response = await fetch(`${dbURL}?_=${new Date().getTime()}`);
                 if (!response.ok) throw new Error();
                 
-                const resData = await response.json();
-                // Format penyimpanan database online menggunakan objek 'data'
-                systemSchedules = resData.data || [];
+                systemSchedules = await response.json();
+                if (!Array.isArray(systemSchedules)) systemSchedules = [];
                 renderSchedules(false);
             } catch (e) {
-                console.error("Gagal sinkron database, memuat memory lokal browser.");
+                console.error("Gagal membaca database cloud.");
                 systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
                 renderSchedules(false);
             }
         }
 
-        // 3. SIMPAN DATA KE DATABASE ONLINE
+        // TULIS DATA KE CLOUD (Diizinkan penuh oleh npoint tanpa token)
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
             try {
                 await fetch(dbURL, {
-                    method: 'PUT',
+                    method: 'POST', // Menggunakan POST / PUT yang valid untuk npoint
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: systemSchedules })
+                    body: JSON.stringify(systemSchedules)
                 });
             } catch (e) { 
-                console.error("Gagal update ke database online", e); 
+                console.error("Gagal push data ke database server.", e); 
             }
         }
 
-        // 4. TAMPILKAN DATA KE LAYAR UTAMA & PANEL SETTING
+        // TAMPILKAN TABEL LAYAR
         function renderSchedules(shouldSave = true) {
             const mainTbody = document.getElementById('main-table-body');
             const managerList = document.getElementById('managerList');
@@ -230,7 +229,7 @@
             if (shouldSave) saveDataToCloud();
         }
 
-        // 5. ATUR INPUT DATA BARU
+        // TAMBAH DATA BARU
         async function addNewSchedule() {
             const hariTgl = document.getElementById('inputHariTgl').value.trim();
             const waktu = document.getElementById('inputWaktu').value.trim();
@@ -259,7 +258,7 @@
             }
         }
 
-        // 6. LOGIKA BADGE STATUS OTOMATIS
+        // HITUNG STATUS BADGE OTOMATIS
         function updateStatusBadges(currentHour, currentMinute) {
             const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
             
@@ -291,12 +290,12 @@
 
         function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
 
-        // EKSEKUSI RUNNING UTAMA
+        // EKSEKUSI INTERVAL JALAN UTAMA
         setInterval(updateDateTime, 1000);
         updateDateTime();
         loadDataFromCloud();
 
-        // Background sync otomatis: Semua TV Tizen mengunduh perubahan dari database online setiap 5 detik
+        // TV Tizen & perangkat lain akan otomatis download pembaruan database tiap 5 detik background tanpa refresh halaman!
         setInterval(loadDataFromCloud, 5000);
     </script>
 </body>
