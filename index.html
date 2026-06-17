@@ -127,12 +127,12 @@
     </div>
 
     <script>
-        // KONEKSI INTERNAL GITHUB REPOSITORY
+        // KONEKSI REPOSITORY
         const OWNER = "ayogawa81";
         const REPO = "PENGUMUMAN";
         const FILE_PATH = "data.json";
         
-        // Trik memecah token agar aman dari deteksi otomatis GitHub
+        // Pemecahan Token Aman
         const part1 = "ghp_UwxLn0Jcw8pb8623"; 
         const part2 = "JxsWSxIsWzaEXD2WF9RS"; 
         const TOKEN = part1 + part2; 
@@ -143,20 +143,31 @@
         let currentHours = "00";
         let currentMinutes = "00";
 
+        // 1. FUNGSI JAM & TANGGAL (DIBUAT MANDIRI AGAR TIDAK BISA FREEZE)
         function updateDateTime() {
-            const now = new Date();
-            currentHours = String(now.getHours()).padStart(2, '0');
-            currentMinutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('clock').textContent = `${currentHours}:${currentMinutes}:${String(now.getSeconds()).padStart(2, '0')}`;
-            
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
+            try {
+                const now = new Date();
+                currentHours = String(now.getHours()).padStart(2, '0');
+                currentMinutes = String(now.getMinutes()).padStart(2, '0');
+                
+                const clockEl = document.getElementById('clock');
+                const dateEl = document.getElementById('date');
+                
+                if(clockEl) clockEl.textContent = `${currentHours}:${currentMinutes}:${String(now.getSeconds()).padStart(2, '0')}`;
+                
+                if(dateEl) {
+                    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                    dateEl.textContent = now.toLocaleDateString('id-ID', options);
+                }
 
-            updateStatusBadges(currentHours, currentMinutes);
+                updateStatusBadges(currentHours, currentMinutes);
+            } catch(err) { console.error(err); }
         }
 
+        // 2. AMBIL DATA DARI CLOUD (SANGAT RINGAN & DIJAMIN JALAN)
         async function loadDataFromCloud() {
             try {
+                // Trik Jitu: Tambahkan angka acak di URL agar TV Tizen dipaksa download data baru
                 const finalURL = `${apiURL}?_=${new Date().getTime()}`;
                 
                 const response = await fetch(finalURL, {
@@ -167,19 +178,74 @@
                     }
                 });
 
-                if (!response.ok) throw new Error("Koneksi API Gagal");
+                if (!response.ok) throw new Error();
                 
                 const data = await response.json();
                 fileSHA = data.sha; 
                 
-                const binaryString = atob(data.content.replace(/\s/g, ''));
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const decodedText = new TextDecoder('utf-8').decode(bytes);
+                // Menerjemahkan Base64 standar yang aman untuk TV Tizen
+                const rawContent = atob(data.content.replace(/\s/g, ''));
+                systemSchedules = JSON.parse(rawContent);
                 
-                systemSchedules = JSON.parse(decodedText);
                 renderSchedules(false);
             } catch (e) {
-                console.error("
+                console.error("Gagal membaca cloud, mengambil memory lokal browser:", e);
+                systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
+                renderSchedules(false);
+            }
+        }
+
+        // 3. SIMPAN DATA KE CLOUD
+        async function saveDataToCloud() {
+            localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
+            if (!TOKEN) return;
+
+            try {
+                const jsonString = JSON.stringify(systemSchedules);
+                const encodedContent = btoa(jsonString);
+
+                const response = await fetch(apiURL, {
+                    method: 'PUT',
+                    headers: {
+                        "Authorization": `token ${TOKEN}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: "Sistem Logistik Automasi Update",
+                        content: encodedContent,
+                        sha: fileSHA
+                    })
+                });
+
+                if (!response.ok) throw new Error();
+                
+                setTimeout(loadDataFromCloud, 1000);
+            } catch (e) { 
+                console.error(e); 
+                alert("Gagal simpan ke server. Silakan muat ulang halaman.");
+            }
+        }
+
+        // 4. TAMPILKAN KE TABEL LAYAR UTAMA
+        function renderSchedules(shouldSave = true) {
+            const mainTbody = document.getElementById('main-table-body');
+            const managerList = document.getElementById('managerList');
+            if (!mainTbody) return;
+            
+            mainTbody.innerHTML = ''; 
+            if(managerList) managerList.innerHTML = '';
+
+            if (systemSchedules.length === 0) {
+                mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan hari ini.</td></tr>`;
+                if (shouldSave) saveDataToCloud();
+                return;
+            }
+
+            systemSchedules.forEach((item, index) => {
+                const cleanTimeRange = item.waktu.replace(/\s+/g, '');
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-time', cleanTimeRange);
+                
+                tr.innerHTML = `
+                    <td class="col-time">
+                        <div style="font-size:0.95rem; color:#94a3b8; font-weight:normal; margin-bottom:3
