@@ -156,34 +156,34 @@ const TOKEN = part1 + part2; // Token akan bergabung otomatis saat aplikasi berj
             updateStatusBadges(currentHours, currentMinutes);
         }
 
-      async function loadDataFromCloud() {
+async function loadDataFromCloud() {
     try {
-        // MEMAKSA TV TIZEN & DESKTOP: URL diubah total setiap 15 detik agar tidak terkena cache
+        // Gabungkan URL dengan pemutus cache agar TV Tizen selalu mendapat data baru
         const finalURL = `${apiURL}${apiURL.includes('?') ? '&' : '?'}_=${new Date().getTime()}`;
         
         const response = await fetch(finalURL, {
             method: 'GET',
             headers: {
                 "Authorization": `token ${TOKEN}`,
-                "Accept": "application/vnd.github.v3+json",
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache"
+                "Accept": "application/vnd.github.v3+json"
             }
         });
 
-        if (!response.ok) throw new Error("Gagal mengambil data dari GitHub");
+        if (!response.ok) throw new Error("Respons API bermasalah");
         
         const data = await response.json();
-        fileSHA = data.sha; // Ambil nomor kode SHA terbaru dari GitHub
+        fileSHA = data.sha; // Ambil SHA terbaru agar bisa melakukan update data
         
-        // Proses pembacaan enkripsi Base64 dari GitHub yang aman untuk semua browser
-        const decodedContent = decodeURIComponent(escape(atob(data.content)));
-        systemSchedules = JSON.parse(decodedContent);
+        // Decoding Base64 yang aman dari error karakter aneh
+        const utf8Content = decodeURIComponent(atob(data.content).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
         
-        // Tampilkan langsung di tabel utama
+        systemSchedules = JSON.parse(utf8Content);
         renderSchedules(false);
     } catch (e) {
-        console.error("Gagal sinkronisasi cloud, membaca data lokal:", e);
+        console.error("Gagal memuat data cloud, membaca memori lokal:", e);
+        // Jika gagal konek ke GitHub, gunakan data darurat di lokal browser
         systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
         renderSchedules(false);
     }
@@ -194,9 +194,12 @@ async function saveDataToCloud() {
     if (!TOKEN || TOKEN.includes("TEMPELKAN")) return;
 
     try {
-        // Proses enkripsi data ke Base64 sebelum dikirim ke GitHub
+        // Enkripsi data ke Base64 yang bersih sebelum dikirim ke GitHub
         const jsonString = JSON.stringify(systemSchedules);
-        const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
+        const encodedContent = btoa(encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
 
         const response = await fetch(apiURL, {
             method: 'PUT',
@@ -205,23 +208,21 @@ async function saveDataToCloud() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                message: "Update jadwal via JWS Stafflog Dashboard",
+                message: "Update jadwal via Stafflog Dashboard",
                 content: encodedContent,
-                sha: fileSHA // Wajib mengirimkan SHA terbaru agar tidak diblokir GitHub
+                sha: fileSHA // Mengirimkan SHA terbaru
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Ditolak oleh GitHub:", errorData);
-            alert("Gagal memperbarui ke layar TV! Pastikan tidak ada dua perangkat yang mengedit bersamaan.");
-            return;
+            throw new Error("Ditolak oleh GitHub");
         }
         
-        // Setelah sukses menyimpan, beri jeda 1 detik lalu paksa download data baru
+        // Jeda 1 detik lalu download ulang data agar layar langsung sinkron
         setTimeout(loadDataFromCloud, 1000);
     } catch (e) { 
-        console.error("Gagal total menyimpan ke GitHub", e); 
+        console.error("Gagal menyimpan data:", e);
+        alert("Gagal menyimpan ke Cloud! Coba muat ulang halaman (Refresh) lalu input kembali.");
     }
 }
 
@@ -232,7 +233,7 @@ function updateStatusBadges(currentHour, currentMinute) {
         const timeRange = row.getAttribute('data-time');
         if (!timeRange || !timeRange.includes('-')) return;
         
-        const cleanTimeRange = timeRange.replace(/\./g, ':');
+        const cleanTimeRange = timeRange.replace(/\s+/g, '').replace(/\./g, ':');
         const [startTime, endTime] = cleanTimeRange.split('-');
         
         const startTimeInMinutes = (parseInt(startTime.split(':')[0]) || 0) * 60 + (parseInt(startTime.split(':')[1]) || 0);
@@ -260,13 +261,13 @@ function updateStatusBadges(currentHour, currentMinute) {
 function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
 
 // =========================================================================
-// SISTEM OTOMATISASI DAN REFRESH LAYAR TV TIZEN
+// SINKRONISASI JALUR OTOMATIS LAYAR TV & DESKTOP
 // =========================================================================
 loadDataFromCloud();
 setInterval(updateDateTime, 1000);
 updateDateTime();
 
-// TV Tizen akan dipaksa mengambil data terupdate dari GitHub setiap 10 detik secara background
+// TV Tizen akan terus mengecek dan menarik data terbaru dari GitHub setiap 10 detik
 setInterval(async () => {
     await loadDataFromCloud();
 }, 10000);
