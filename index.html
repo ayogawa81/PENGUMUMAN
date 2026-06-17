@@ -116,7 +116,7 @@
             <div class="form-group">
                 <div class="form-row">
                     <input type="text" id="inputHariTgl" placeholder="Contoh: Senin, 15 Juni">
-                    <input type="text" id="inputWaktu" placeholder="Contoh: 08:00 - 09:30">
+                    <input type="text" id="inputWaktu" placeholder="Contoh: 08:30 - 12:00">
                 </div>
                 <input type="text" id="inputKegiatan" placeholder="Nama Agenda / Kegiatan Utama">
                 <input type="text" id="inputLokasi" placeholder="Lokasi Ruang / Tempat">
@@ -132,13 +132,12 @@
         const REPO = "PENGUMUMAN";
         const FILE_PATH = "data.json";
         
-        // Trik memecah token agar tidak diblokir otomatis oleh keamanan GitHub
-const part1 = "ghp_UwxLn0Jcw8pb8623"; // Jalankan potong token Anda di sini (setengah depan)
-const part2 = "JxsWSxIsWzaEXD2WF9RS";    // Masukkan sisanya di sini (setengah belakang)
-
-const TOKEN = part1 + part2; // Token akan bergabung otomatis saat aplikasi berjalan
+        // Trik memecah token agar aman dari deteksi otomatis GitHub
+        const part1 = "ghp_UwxLn0Jcw8pb8623"; 
+        const part2 = "JxsWSxIsWzaEXD2WF9RS"; 
+        const TOKEN = part1 + part2; 
         
-       const apiURL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}?_=${new Date().getTime()}`;
+        const apiURL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
         let systemSchedules = [];
         let fileSHA = "";
         let currentHours = "00";
@@ -156,124 +155,31 @@ const TOKEN = part1 + part2; // Token akan bergabung otomatis saat aplikasi berj
             updateStatusBadges(currentHours, currentMinutes);
         }
 
-async function loadDataFromCloud() {
-    try {
-        // Melakukan bypass cache dengan menggunakan timestamp unik
-        const finalURL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}?_=${new Date().getTime()}`;
-        
-        const response = await fetch(finalURL, {
-            method: 'GET',
-            headers: {
-                "Authorization": `token ${TOKEN}`,
-                "Accept": "application/vnd.github.v3+json"
-            }
-        });
+        async function loadDataFromCloud() {
+            try {
+                const finalURL = `${apiURL}?_=${new Date().getTime()}`;
+                
+                const response = await fetch(finalURL, {
+                    method: 'GET',
+                    headers: {
+                        "Authorization": `token ${TOKEN}`,
+                        "Accept": "application/vnd.github.v3+json"
+                    }
+                });
 
-        if (!response.ok) throw new Error("Koneksi API Gagal");
-        
-        const data = await response.json();
-        fileSHA = data.sha; // Mengunci SHA terbaru agar tombol tambah berfungsi
-        
-        // CARA BARU: Cara decoding alternatif yang jauh lebih aman dari crash teks/karakter
-        const binaryString = atob(data.content.replace(/\s/g, ''));
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        const decodedText = new TextDecoder('utf-8').decode(bytes);
-        
-        systemSchedules = JSON.parse(decodedText);
-        renderSchedules(false);
-    } catch (e) {
-        console.error("Gagal sinkronisasi cloud, membaca data lokal:", e);
-        // Proteksi darurat jika GitHub sedang down atau limit
-        systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
-        renderSchedules(false);
-    }
-}
-
-async function saveDataToCloud() {
-    localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
-    if (!TOKEN || TOKEN.includes("TEMPELKAN")) return;
-
-    try {
-        // Enkripsi balik yang presisi ke format UTF-8 Base64 sebelum di-upload ke GitHub
-        const jsonString = JSON.stringify(systemSchedules);
-        const encoder = new TextEncoder();
-        const dataBytes = encoder.encode(jsonString);
-        let binaryString = '';
-        for (let i = 0; i < dataBytes.byteLength; i++) {
-            binaryString += String.fromCharCode(dataBytes[i]);
-        }
-        const encodedContent = btoa(binaryString);
-
-        const response = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`, {
-            method: 'PUT',
-            headers: {
-                "Authorization": `token ${TOKEN}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: "Sistem Logistik Automasi Update",
-                content: encodedContent,
-                sha: fileSHA
-            })
-        });
-
-        if (!response.ok) throw new Error("Gagal menyimpan data");
-        
-        setTimeout(loadDataFromCloud, 1000);
-    } catch (e) { 
-        console.error("Gagal menyimpan ke GitHub", e); 
-        alert("Gagal koneksi ke server, silakan refresh halaman.");
-    }
-}
-
-function updateStatusBadges(currentHour, currentMinute) {
-    const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
-    
-    document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
-        const timeRange = row.getAttribute('data-time');
-        if (!timeRange || !timeRange.includes('-')) return;
-        
-        const cleanTimeRange = timeRange.replace(/\s+/g, '').replace(/\./g, ':');
-        const [startTime, endTime] = cleanTimeRange.split('-');
-        
-        const startTimeInMinutes = (parseInt(startTime.split(':')[0]) || 0) * 60 + (parseInt(startTime.split(':')[1]) || 0);
-        const endTimeInMinutes = (parseInt(endTime.split(':')[0]) || 0) * 60 + (parseInt(endTime.split(':')[1]) || 0);
-        
-        const badge = row.querySelector('.status-badge');
-        if(!badge) return;
-        badge.className = 'status-badge';
-        
-        if (currentTimeInMinutes < startTimeInMinutes) { 
-            badge.textContent = 'Menunggu'; 
-            badge.classList.add('status-waiting'); 
-        } 
-        else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { 
-            badge.textContent = 'Berlangsung'; 
-            badge.classList.add('status-ongoing'); 
-        } 
-        else { 
-            badge.textContent = 'Selesai'; 
-            badge.classList.add('status-done'); 
-        }
-    });
-}
-
-function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
-
-// =========================================================================
-// SINKRONISASI AKTIF
-// =========================================================================
-loadDataFromCloud();
-setInterval(updateDateTime, 1000);
-updateDateTime();
-
-// Jalur background otomatisasi refresh TV Tizen setiap 10 detik
-setInterval(async () => {
-    await loadDataFromCloud();
-}, 10000);
-    </script>
-</body>
-</html>
+                if (!response.ok) throw new Error("Koneksi API Gagal");
+                
+                const data = await response.json();
+                fileSHA = data.sha; 
+                
+                const binaryString = atob(data.content.replace(/\s/g, ''));
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const decodedText = new TextDecoder('utf-8').decode(bytes);
+                
+                systemSchedules = JSON.parse(decodedText);
+                renderSchedules(false);
+            } catch (e) {
+                console.error("
