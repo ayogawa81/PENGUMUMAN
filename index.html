@@ -260,20 +260,44 @@
             }
         }
 
-        function updateStatusBadges(currentHour, currentMinute) {
+      function updateStatusBadges(currentHour, currentMinute) {
             const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
+            
             document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
                 const timeRange = row.getAttribute('data-time');
                 if (!timeRange || !timeRange.includes('-')) return;
-                const [startTime, endTime] = timeRange.split('-');
-                const startTimeInMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-                const endTimeInMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+                
+                // Mengubah titik (.) menjadi titik dua (:) agar format pembacaan seragam
+                const cleanTimeRange = timeRange.replace(/\./g, ':');
+                const [startTime, endTime] = cleanTimeRange.split('-');
+                
+                // Parsing jam dan menit secara aman
+                const startHour = parseInt(startTime.split(':')[0]) || 0;
+                const startMinute = parseInt(startTime.split(':')[1]) || 0;
+                const endHour = parseInt(endTime.split(':')[0]) || 0;
+                const endMinute = parseInt(endTime.split(':')[1]) || 0;
+                
+                const startTimeInMinutes = startHour * 60 + startMinute;
+                const endTimeInMinutes = endHour * 60 + endMinute;
+                
                 const badge = row.querySelector('.status-badge');
                 if(!badge) return;
+                
                 badge.className = 'status-badge';
-                if (currentTimeInMinutes < startTimeInMinutes) { badge.textContent = 'Menunggu'; badge.classList.add('status-waiting'); }
-                else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { badge.textContent = 'Berlangsung'; badge.classList.add('status-ongoing'); }
-                else { badge.textContent = 'Selesai'; badge.classList.add('status-done'); }
+                
+                // Penentuan status logika waktu
+                if (currentTimeInMinutes < startTimeInMinutes) { 
+                    badge.textContent = 'Menunggu'; 
+                    badge.classList.add('status-waiting'); 
+                } 
+                else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { 
+                    badge.textContent = 'Berlangsung'; 
+                    badge.classList.add('status-ongoing'); 
+                } 
+                else { 
+                    badge.textContent = 'Selesai'; 
+                    badge.classList.add('status-done'); 
+                }
             });
         }
 
