@@ -156,21 +156,35 @@ const TOKEN = part1 + part2; // Token akan bergabung otomatis saat aplikasi berj
             updateStatusBadges(currentHours, currentMinutes);
         }
 
-        async function loadDataFromCloud() {
-            try {
-                const res = await fetch(`${apiURL}?_=${new Date().getTime()}`, {
-                    headers: TOKEN !== "ISI_TOKEN_GITHUB_ANDA_DISINI" && TOKEN !== "ghp_TEMPELKAN_TOKEN_ANDA_DI_SINI" ? { "Authorization": `token ${TOKEN}` } : {}
-                });
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                fileSHA = data.sha;
-                systemSchedules = JSON.parse(atob(data.content));
-                renderSchedules(false);
-            } catch (e) {
-                systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
-                renderSchedules(false);
+      async function loadDataFromCloud() {
+    try {
+        // Menggabungkan URL dengan anti-cache agar TV Tizen wajib mengambil data paling segar
+        const finalURL = `${apiURL}${apiURL.includes('?') ? '&' : '?'}_=${new Date().getTime()}`;
+        
+        // TV Tizen wajib mengirimkan TOKEN di bagian Headers agar diizinkan oleh GitHub
+        const response = await fetch(finalURL, {
+            method: 'GET',
+            headers: {
+                "Authorization": `token ${TOKEN}`,
+                "Accept": "application/vnd.github.v3+json",
+                "Cache-Control": "no-cache"
             }
-        }
+        });
+
+        if (!response.ok) throw new Error("Gagal memuat data dari GitHub");
+        
+        const data = await response.json();
+        fileSHA = data.sha;
+        
+        // Proses decoding data JSON dari GitHub
+        systemSchedules = JSON.parse(atob(data.content));
+        renderSchedules(false);
+    } catch (e) {
+        console.error("Mode Offline Aktif:", e);
+        systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
+        renderSchedules(false);
+    }
+}
 
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
