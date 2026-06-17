@@ -101,7 +101,7 @@
                     </tr>
                 </thead>
                 <tbody id="main-table-body">
-                    <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke GitHub Internal...</td></tr>
+                    <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke Database Online Global...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -110,7 +110,7 @@
     <div class="modal-overlay" id="settingModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>⚙️ Pengaturan Jadwal Global (GitHub Repo)</h2>
+                <h2>⚙️ Pengaturan Jadwal Global (Online Database)</h2>
                 <button class="btn-close" onclick="toggleModal(false)">✕</button>
             </div>
             <div class="form-group">
@@ -127,106 +127,61 @@
     </div>
 
     <script>
-        // KONEKSI REPOSITORY
-        const OWNER = "ayogawa81";
-        const REPO = "PENGUMUMAN";
-        const FILE_PATH = "data.json";
+        // DATABASE GLOBAL ONLINE (Bebas Blokir, Stabil, Auto-Sync)
+        const dbURL = "https://api.v0.myjson.online/v1/records/48e0c8da-5ea5-4927-b50a-f111075306cd";
         
-        // Pemecahan Token Aman
-        const part1 = "ghp_UwxLn0Jcw8pb8623"; 
-        const part2 = "JxsWSxIsWzaEXD2WF9RS"; 
-        const TOKEN = part1 + part2; 
-        
-        const apiURL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
         let systemSchedules = [];
-        let fileSHA = "";
         let currentHours = "00";
         let currentMinutes = "00";
 
-        // 1. FUNGSI JAM & TANGGAL (DIBUAT MANDIRI AGAR TIDAK BISA FREEZE)
+        // 1. REALTIME CLOCK & DATE
         function updateDateTime() {
             try {
                 const now = new Date();
                 currentHours = String(now.getHours()).padStart(2, '0');
                 currentMinutes = String(now.getMinutes()).padStart(2, '0');
                 
-                const clockEl = document.getElementById('clock');
-                const dateEl = document.getElementById('date');
+                document.getElementById('clock').textContent = `${currentHours}:${currentMinutes}:${String(now.getSeconds()).padStart(2, '0')}`;
                 
-                if(clockEl) clockEl.textContent = `${currentHours}:${currentMinutes}:${String(now.getSeconds()).padStart(2, '0')}`;
-                
-                if(dateEl) {
-                    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-                    dateEl.textContent = now.toLocaleDateString('id-ID', options);
-                }
+                const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                document.getElementById('date').textContent = now.toLocaleDateString('id-ID', options);
 
                 updateStatusBadges(currentHours, currentMinutes);
             } catch(err) { console.error(err); }
         }
 
-        // 2. AMBIL DATA DARI CLOUD (SANGAT RINGAN & DIJAMIN JALAN)
+        // 2. KONEKSI & AMBIL DATA DARI DATABASE ONLINE
         async function loadDataFromCloud() {
             try {
-                // Trik Jitu: Tambahkan angka acak di URL agar TV Tizen dipaksa download data baru
-                const finalURL = `${apiURL}?_=${new Date().getTime()}`;
-                
-                const response = await fetch(finalURL, {
-                    method: 'GET',
-                    headers: {
-                        "Authorization": `token ${TOKEN}`,
-                        "Accept": "application/vnd.github.v3+json"
-                    }
-                });
-
+                const response = await fetch(`${dbURL}?_=${new Date().getTime()}`);
                 if (!response.ok) throw new Error();
                 
-                const data = await response.json();
-                fileSHA = data.sha; 
-                
-                // Menerjemahkan Base64 standar yang aman untuk TV Tizen
-                const rawContent = atob(data.content.replace(/\s/g, ''));
-                systemSchedules = JSON.parse(rawContent);
-                
+                const resData = await response.json();
+                // Format penyimpanan database online menggunakan objek 'data'
+                systemSchedules = resData.data || [];
                 renderSchedules(false);
             } catch (e) {
-                console.error("Gagal membaca cloud, mengambil memory lokal browser:", e);
+                console.error("Gagal sinkron database, memuat memory lokal browser.");
                 systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
                 renderSchedules(false);
             }
         }
 
-        // 3. SIMPAN DATA KE CLOUD
+        // 3. SIMPAN DATA KE DATABASE ONLINE
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
-            if (!TOKEN) return;
-
             try {
-                const jsonString = JSON.stringify(systemSchedules);
-                const encodedContent = btoa(jsonString);
-
-                const response = await fetch(apiURL, {
+                await fetch(dbURL, {
                     method: 'PUT',
-                    headers: {
-                        "Authorization": `token ${TOKEN}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: "Sistem Logistik Automasi Update",
-                        content: encodedContent,
-                        sha: fileSHA
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data: systemSchedules })
                 });
-
-                if (!response.ok) throw new Error();
-                
-                setTimeout(loadDataFromCloud, 1000);
             } catch (e) { 
-                console.error(e); 
-                alert("Gagal simpan ke server. Silakan muat ulang halaman.");
+                console.error("Gagal update ke database online", e); 
             }
         }
 
-        // 4. TAMPILKAN KE TABEL LAYAR UTAMA
+        // 4. TAMPILKAN DATA KE LAYAR UTAMA & PANEL SETTING
         function renderSchedules(shouldSave = true) {
             const mainTbody = document.getElementById('main-table-body');
             const managerList = document.getElementById('managerList');
@@ -236,7 +191,7 @@
             if(managerList) managerList.innerHTML = '';
 
             if (systemSchedules.length === 0) {
-                mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan hari ini.</td></tr>`;
+                mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan saat ini. Klik Setting untuk menambah.</td></tr>`;
                 if (shouldSave) saveDataToCloud();
                 return;
             }
@@ -248,4 +203,101 @@
                 
                 tr.innerHTML = `
                     <td class="col-time">
-                        <div style="font-size:0.95rem; color:#94a3b8; font-weight:normal; margin-bottom:3
+                        <div style="font-size:0.95rem; color:#94a3b8; font-weight:normal; margin-bottom:3px;">${item.hariTgl || ''}</div>
+                        <div>${item.waktu}</div>
+                    </td>
+                    <td class="col-event">${item.kegiatan}</td>
+                    <td class="col-room">${item.lokasi}</td>
+                    <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
+                `;
+                mainTbody.appendChild(tr);
+
+                if(managerList) {
+                    const managerItem = document.createElement('div');
+                    managerItem.className = 'manager-item';
+                    managerItem.innerHTML = `
+                        <div class="manager-item-text">
+                            <small style="color:#f59e0b;">${item.hariTgl || ''} | ${item.waktu}</small><br>
+                            <strong>${item.kegiatan}</strong> (${item.lokasi})
+                        </div>
+                        <button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>
+                    `;
+                    managerList.appendChild(managerItem);
+                }
+            });
+
+            updateStatusBadges(currentHours, currentMinutes);
+            if (shouldSave) saveDataToCloud();
+        }
+
+        // 5. ATUR INPUT DATA BARU
+        async function addNewSchedule() {
+            const hariTgl = document.getElementById('inputHariTgl').value.trim();
+            const waktu = document.getElementById('inputWaktu').value.trim();
+            const kegiatan = document.getElementById('inputKegiatan').value.trim();
+            const lokasi = document.getElementById('inputLokasi').value.trim();
+            
+            if (!waktu || !kegiatan || !lokasi || !waktu.includes('-')) {
+                return alert("Isi dengan benar! Contoh format waktu: 08:30 - 12:00");
+            }
+
+            document.getElementById('btnAdd').disabled = true;
+            systemSchedules.push({ hariTgl, waktu, kegiatan, lokasi });
+            renderSchedules(true);
+
+            document.getElementById('inputHariTgl').value = '';
+            document.getElementById('inputWaktu').value = '';
+            document.getElementById('inputKegiatan').value = '';
+            document.getElementById('inputLokasi').value = '';
+            document.getElementById('btnAdd').disabled = false;
+        }
+
+        function deleteSchedule(index) {
+            if (confirm("Hapus jadwal ini?")) {
+                systemSchedules.splice(index, 1);
+                renderSchedules(true);
+            }
+        }
+
+        // 6. LOGIKA BADGE STATUS OTOMATIS
+        function updateStatusBadges(currentHour, currentMinute) {
+            const currentTimeInMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
+            
+            document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
+                const timeRange = row.getAttribute('data-time');
+                if (!timeRange || !timeRange.includes('-')) return;
+                
+                const cleanTimeRange = timeRange.replace(/\./g, ':');
+                const [startTime, endTime] = cleanTimeRange.split('-');
+                
+                const startTimeInMinutes = (parseInt(startTime.split(':')[0]) || 0) * 60 + (parseInt(startTime.split(':')[1]) || 0);
+                const endTimeInMinutes = (parseInt(endTime.split(':')[0]) || 0) * 60 + (parseInt(endTime.split(':')[1]) || 0);
+                
+                const badge = row.querySelector('.status-badge');
+                if(!badge) return;
+                badge.className = 'status-badge';
+                
+                if (currentTimeInMinutes < startTimeInMinutes) { 
+                    badge.textContent = 'Menunggu'; badge.className = 'status-badge status-waiting'; 
+                } 
+                else if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) { 
+                    badge.textContent = 'Berlangsung'; badge.className = 'status-badge status-ongoing'; 
+                } 
+                else { 
+                    badge.textContent = 'Selesai'; badge.className = 'status-badge status-done'; 
+                }
+            });
+        }
+
+        function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
+
+        // EKSEKUSI RUNNING UTAMA
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+        loadDataFromCloud();
+
+        // Background sync otomatis: Semua TV Tizen mengunduh perubahan dari database online setiap 5 detik
+        setInterval(loadDataFromCloud, 5000);
+    </script>
+</body>
+</html>
