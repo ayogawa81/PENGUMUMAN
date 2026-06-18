@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Display Jadwal Kegiatan Online Synchronized</title>
+    <script src="https://code.responsivevoice.org/voice.js"></script>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -71,9 +72,27 @@
         .manager-item { display: flex; justify-content: space-between; align-items: center; background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #2d3748; gap: 10px; }
         .manager-item-text { font-size: 0.95rem; color: #cbd5e1; flex: 1; }
         .btn-delete { background-color: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+
+        /* OVERLAY UNLOCK AUDIO KHUSUS TV TIZEN & PC */
+        #tizenAudioUnlocker {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(15, 23, 42, 0.98); z-index: 99999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            color: white; text-align: center; padding: 20px;
+        }
     </style>
 </head>
 <body>
+
+    <div id="tizenAudioUnlocker">
+        <h1 style="font-size: 2.5rem; margin-bottom: 15px; color: #3b82f6; font-weight: 800;">SISTEM MONITORING JADWAL</h1>
+        <p style="font-size: 1.3rem; margin-bottom: 30px; color: #94a3b8; max-width: 500px;">Harap klik tombol di bawah ini menggunakan remote atau mouse agar TV Tizen & Browser mengizinkan suara pengumuman AI aktif.</p>
+        <button onclick="bukaKunciAudioTizen()" style="padding: 18px 45px; font-size: 1.5rem; font-weight: bold; background-color: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 10px 25px rgba(16,185,129,0.4);">
+            🔊 AKTIFKAN SUARA DISPLAY
+        </button>
+    </div>
+
+    <audio id="globalAudioPlayer" preload="auto"></audio>
 
     <header>
         <div class="logo-title">
@@ -127,15 +146,40 @@
     </div>
 
     <script>
-        // PENTING: GANTI teks di bawah ini dengan URL api.npoint.io hasil Langkah 1 Anda!
         const dbURL = "https://api.npoint.io/79fb87bf4e7964927964";
         
-     let systemSchedules = [];
+        let systemSchedules = [];
         let currentHours = "00";
         let currentMinutes = "00";
-        let editIndex = -1; // -1 berarti mode tambah, jika >= 0 berarti mode edit
+        let editIndex = -1;
+        let spokenSchedules = new Set();
+        
+        let tizenAudioValid = false;
 
-        // JAM REALTIME
+        function bukaKunciAudioTizen() {
+            try {
+                // Trigger inisial menggunakan audio kosong bawaan untuk unlock audio konteks browser TV
+                const player = document.getElementById('globalAudioPlayer');
+                player.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+                
+                player.play().then(() => {
+                    tizenAudioValid = true;
+                    document.getElementById('tizenAudioUnlocker').style.display = 'none';
+                    console.log("Audio Engine Berhasil Di-unlock!");
+                    
+                    // Test suara menyapa saat pertama kali diaktifkan agar operator tahu sistem siap
+                    setTimeout(() => {
+                        responsiveVoice.speak("Sistem monitoring suara display telah diaktifkan secara sukses.", "Indonesian Female", { volume: 1, rate: 0.95 });
+                    }, 300);
+                }).catch(err => {
+                    alert("Gagal mengaktifkan Audio. Harap klik ulang tombol!");
+                    console.error(err);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         function updateDateTime() {
             try {
                 const now = new Date();
@@ -151,7 +195,89 @@
             } catch(err) { console.error(err); }
         }
 
-        // BACA DATA DARI CLOUD
+        function playBeepSound(callback) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                function pembuatBeep(waktuMulai, frekuensi, durasi) {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = frekuensi; 
+                    
+                    gainNode.gain.setValueAtTime(0.3, waktuMulai);
+                    gainNode.gain.exponentialRampToValueAtTime(0.00001, waktuMulai + durasi);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.start(waktuMulai);
+                    oscillator.stop(waktuMulai + durasi);
+                }
+                
+                pembuatBeep(audioCtx.currentTime, 880, 0.15);
+                pembuatBeep(audioCtx.currentTime + 0.2, 1046.5, 0.2);
+                
+                setTimeout(() => {
+                    if (callback) callback();
+                }, 550);
+            } catch (e) {
+                console.error("Gagal membunyikan beep: ", e);
+                if (callback) callback();
+            }
+        }
+
+  function panggilSuaraAI(teks) {
+    if (!tizenAudioValid) return;
+
+    try {
+        console.log("Memanggil Suara Wanita Jalur Direct Bypass...");
+        const player = document.getElementById('globalAudioPlayer');
+        
+        // Menggunakan engine translate khusus (tl=id) dengan aksen wanita standar Google
+        // client=tw-ob adalah jalur tercepat yang biasanya lolos dari sensor browser TV
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(teks)}`;
+        
+        player.pause();
+        player.src = url;
+        player.load();
+        
+        setTimeout(() => {
+            player.play().then(() => {
+                console.log("Suara wanita berhasil keluar.");
+            }).catch(err => {
+                console.warn("Jalur Google diblokir Tizen, terpaksa menaikkan pitch suara internal TV...", err);
+                // Jika masih membandel, jalankan cadangan dengan PITCH TINGGI (Suara Wanita Buatan)
+                jalurCadanganTizenLokal(teks); 
+            });
+        }, 300);
+
+    } catch (error) {
+        console.error("Error:", error);
+        jalurCadanganTizenLokal(teks);
+    }
+}
+
+function jalurCadanganTizenLokal(teks) {
+    try {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); 
+
+            const speech = new SpeechSynthesisUtterance(teks);
+            speech.lang = 'id-ID';
+            speech.rate = 0.95; 
+            
+            // PENTING: Jika TV memaksa pakai suara laki-laki internalnya, 
+            // nilainya kita dongkrak ke 1.5 agar frekuensinya melengking seperti wanita.
+            speech.pitch = 1.5; 
+
+            window.speechSynthesis.speak(speech);
+        }
+    } catch (e) {
+        console.error("Jalur cadangan gagal:", e);
+    }
+}
         async function loadDataFromCloud() {
             try {
                 const response = await fetch(`${dbURL}?_=${new Date().getTime()}`);
@@ -167,7 +293,6 @@
             }
         }
 
-        // TULIS DATA KE CLOUD
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
             try {
@@ -181,7 +306,6 @@
             }
         }
 
-        // TAMPILKAN TABEL LAYAR
         function renderSchedules(shouldSave = true) {
             const mainTbody = document.getElementById('main-table-body');
             const managerList = document.getElementById('managerList');
@@ -233,7 +357,6 @@
             if (shouldSave) saveDataToCloud();
         }
 
-        // FUNGSI ISI FORM SAAT TOMBOL EDIT DIKLIK
         function isiFormEdit(index) {
             const item = systemSchedules[index];
             document.getElementById('inputHariTgl').value = item.hariTgl || '';
@@ -241,18 +364,13 @@
             document.getElementById('inputKegiatan').value = item.kegiatan || '';
             document.getElementById('inputLokasi').value = item.lokasi || '';
             
-            // Set index yang sedang diedit dan ubah tampilan tombol utama
             editIndex = index;
             const btnAdd = document.getElementById('btnAdd');
             btnAdd.textContent = "💾 Simpan Perubahan";
             btnAdd.style.backgroundColor = "#f39c12";
-            
-            // Scroll ke arah form input di dalam modal agar operator fokus
-            document.querySelector('.modal-content').scrollTop = 0;
         }
 
-        // SIMPAN DATA JADWAL (BISA TAMBAH BARU / UPDATE DATA EDIT)
-        async function addNewSchedule() {
+       async function addNewSchedule() {
             const hariTgl = document.getElementById('inputHariTgl').value.trim();
             const waktu = document.getElementById('inputWaktu').value.trim();
             const kegiatan = document.getElementById('inputKegiatan').value.trim();
@@ -266,19 +384,23 @@
             btnAdd.disabled = true;
 
             if (editIndex === -1) {
-                // Mode Tambah Jadwal Baru
                 systemSchedules.push({ hariTgl, waktu, kegiatan, lokasi });
             } else {
-                // Mode Update Jadwal yang Sudah Ada
+                const oldItem = systemSchedules[editIndex];
+                const oldKey = `${oldItem.hariTgl || ''}-${oldItem.waktu.replace(/\s+/g, '')}-${oldItem.kegiatan}`;
+                
+                spokenSchedules.delete(`${oldKey}-menunggu`);
+                spokenSchedules.delete(`${oldKey}-berlangsung`);
+                spokenSchedules.delete(`${oldKey}-selesai`);
+
                 systemSchedules[editIndex] = { hariTgl, waktu, kegiatan, lokasi };
-                editIndex = -1; // Reset kembali ke mode tambah
+                editIndex = -1;
                 btnAdd.textContent = "＋ Tambahkan ke Semua Layar";
                 btnAdd.style.backgroundColor = "#10b981";
             }
 
             renderSchedules(true);
 
-            // Bersihkan form input kembali kosong
             document.getElementById('inputHariTgl').value = '';
             document.getElementById('inputWaktu').value = '';
             document.getElementById('inputKegiatan').value = '';
@@ -288,7 +410,6 @@
 
         function deleteSchedule(index) {
             if (confirm("Hapus jadwal ini?")) {
-                // Jika sedang mengedit jadwal yang dihapus, reset status form ke tambah baru
                 if (editIndex === index) {
                     editIndex = -1;
                     const btnAdd = document.getElementById('btnAdd');
@@ -304,7 +425,6 @@
             }
         }
 
-        // HITUNG STATUS BADGE OTOMATIS (VERSI AMAN & ANTI-CRASH)
         function updateStatusBadges(currentHour, currentMinute) {
             const now = new Date();
             const hariIniMurni = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -315,6 +435,8 @@
                     if (!timeRange || !timeRange.includes('-')) return;
 
                     const colTimeText = row.querySelector('.col-time div').textContent || '';
+                    const eventName = row.querySelector('.col-event').textContent || '';
+                    const roomName = row.querySelector('.col-room').textContent || '';
                     const badge = row.querySelector('.status-badge');
                     if (!badge) return;
 
@@ -323,7 +445,6 @@
                     if (colTimeText) {
                         const daftarBulan = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
                         const teksBersih = colTimeText.toLowerCase();
-                        
                         const matchTanggal = teksBersih.match(/\b\d{1,2}\b/);
                         let indexBulan = -1;
                         
@@ -337,16 +458,12 @@
                         if (matchTanggal && indexBulan !== -1) {
                             const tglAngka = parseInt(matchTanggal[0]);
                             const cekTanggalValid = new Date(tahunAgenda, indexBulan, tglAngka);
-                            
-                            if (!isNaN(cekTanggalValid.getTime())) {
-                                tglAgenda = cekTanggalValid;
-                            }
+                            if (!isNaN(cekTanggalValid.getTime())) tglAgenda = cekTanggalValid;
                         }
                     }
 
                     const cleanTimeRange = timeRange.replace(/\./g, ':');
                     const [startTime, endTime] = cleanTimeRange.split('-');
-                    
                     const [jamMulai, menitMulai] = startTime.split(':').map(Number);
                     const [jamSelesai, menitSelesai] = endTime.split(':').map(Number);
 
@@ -361,31 +478,52 @@
                     const waktuSekarangLengkap = now.getTime();
 
                     badge.className = 'status-badge';
-                    
+                    const baseKey = `${colTimeText}-${timeRange}-${eventName}`;
+
                     if (waktuSekarangLengkap > waktuSelesaiLengkap) {
                         badge.textContent = 'Selesai';
                         badge.className = 'status-badge status-done';
+
+                        const keySelesai = `${baseKey}-selesai`;
+                        if (!spokenSchedules.has(keySelesai)) {
+                            spokenSchedules.add(keySelesai);
+                            playBeepSound(() => {
+                                panggilSuaraAI(`Informasi, kegiatan ${eventName} di lokasi ${roomName} telah selesai.`);
+                            });
+                        }
+
                     } else if (waktuSekarangLengkap >= waktuMulaiLengkap && waktuSekarangLengkap <= waktuSelesaiLengkap) {
                         badge.textContent = 'Berlangsung';
                         badge.className = 'status-badge status-ongoing';
+
+                        const keyBerlangsung = `${baseKey}-berlangsung`;
+                        if (!spokenSchedules.has(keyBerlangsung)) {
+                            spokenSchedules.add(keyBerlangsung);
+                            playBeepSound(() => {
+                                panggilSuaraAI(`Perhatian, kegiatan ${eventName} di lokasi ${roomName} sedang berlangsung.`);
+                            });
+                        }
+
                     } else {
                         badge.textContent = 'Menunggu';
                         badge.className = 'status-badge status-waiting';
+
+                        const keyMenunggu = `${baseKey}-menunggu`;
+                        if (!spokenSchedules.has(keyMenunggu)) {
+                            spokenSchedules.add(keyMenunggu);
+                            playBeepSound(() => {
+                                panggilSuaraAI(`Pemberitahuan, kegiatan ${eventName} di lokasi ${roomName} dalam status menunggu.`);
+                            });
+                        }
                     }
 
                 } catch (error) {
-                    console.error("Terjadi kesalahan pembacaan baris jadwal:", error);
-                    const badgeGagal = row.querySelector('.status-badge');
-                    if (badgeGagal) {
-                        badgeGagal.textContent = 'Menunggu';
-                        badgeGagal.className = 'status-badge status-waiting';
-                    }
+                    console.error(error);
                 }
             });
         }
         
         function toggleModal(show) { 
-            // Jika modal ditutup, reset paksa form dari mode edit ke mode tambah biasa
             if (!show && editIndex !== -1) {
                 editIndex = -1;
                 const btnAdd = document.getElementById('btnAdd');
@@ -399,12 +537,9 @@
             document.getElementById('settingModal').classList.toggle('active', show); 
         }
 
-        // EKSEKUSI INTERVAL JALAN UTAMA
         setInterval(updateDateTime, 1000);
         updateDateTime();
         loadDataFromCloud();
-
-        // Singkronisasi background tiap 5 detik
         setInterval(loadDataFromCloud, 5000);
     </script>
 </body>
