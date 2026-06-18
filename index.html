@@ -261,29 +261,51 @@
 
 function jalurCadanganTizenLokal(teks) {
     try {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Bersihkan antrean suara yang macet
+        if (!('speechSynthesis' in window)) return;
 
+        window.speechSynthesis.cancel(); // Hentikan suara yang sedang macet
+
+        const eksekusiSuara = () => {
             const speech = new SpeechSynthesisUtterance(teks);
             speech.lang = 'id-ID';
             
-            // --- TAKTIK MANIPULASI AGRESIF UNTUK TV TIZEN ---
-            speech.rate = 0.85;  // Diperlambat agar artikulasinya jelas dan anggun
-            speech.pitch = 1.7;   // DIBAWA KE TITIK EKSTREM (Normalnya 1.0, kita paksa ke 1.7 agar melengking menjadi suara wanita)
-            speech.volume = 1.0;  // Volume maksimal
+            // MANIPULASI NADA EKSTREM (PITCH)
+            speech.rate = 0.85;  
+            speech.pitch = 1.6;  // Naikkan ke 1.6 atau 1.7 agar suara cowok lokal jadi melengking/feminin
+            speech.volume = 1.0;
 
-            // Cari dan kunci paksa jika ada library ID lain di dalam firmware TV
             const voices = window.speechSynthesis.getVoices();
-            const indonesianVoice = voices.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
+            
+            // Cari suara Indonesia yang BUKAN laki-laki (menghindari nama David / Male)
+            let indonesianVoice = voices.find(voice => 
+                (voice.lang.includes('id') || voice.lang.includes('ID')) && 
+                !voice.name.toLowerCase().includes('david') && 
+                !voice.name.toLowerCase().includes('male')
+            );
+
+            // Jika tidak ketemu yang spesifik, ambil saja suara Indonesia apa pun yang tersedia
+            if (!indonesianVoice) {
+                indonesianVoice = voices.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
+            }
+
             if (indonesianVoice) {
                 speech.voice = indonesianVoice;
+                console.log("Mengunci suara lokal: " + indonesianVoice.name);
             }
 
             window.speechSynthesis.speak(speech);
-            console.log("Manipulasi pitch ekstrem berhasil ditembakkan ke TV Tizen.");
+            console.log("Manipulasi pitch berhasil ditembakkan.");
+        };
+
+        // AKALAN AGAR DAFTAR SUARA TIDAK KOSONG (Krusial untuk Chrome, Edge & Tizen)
+        if (window.speechSynthesis.getVoices().length === 0) {
+            window.speechSynthesis.onvoiceschanged = eksekusiSuara;
+        } else {
+            eksekusiSuara();
         }
+
     } catch (e) {
-        console.error("Gagal memanipulasi suara internal TV:", e);
+        console.error("Gagal memanipulasi suara internal:", e);
     }
 }
         async function loadDataFromCloud() {
