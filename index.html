@@ -130,9 +130,10 @@
         // PENTING: GANTI teks di bawah ini dengan URL api.npoint.io hasil Langkah 1 Anda!
         const dbURL = "https://api.npoint.io/79fb87bf4e7964927964";
         
-        let systemSchedules = [];
+      let systemSchedules = [];
         let currentHours = "00";
         let currentMinutes = "00";
+        let editIndex = -1; // -1 berarti mode tambah, jika >= 0 berarti mode edit
 
         // JAM REALTIME
         function updateDateTime() {
@@ -166,12 +167,12 @@
             }
         }
 
-        // TULIS DATA KE CLOUD (Diizinkan penuh oleh npoint tanpa token)
+        // TULIS DATA KE CLOUD
         async function saveDataToCloud() {
             localStorage.setItem("LOCAL_JWS_DATA", JSON.stringify(systemSchedules));
             try {
                 await fetch(dbURL, {
-                    method: 'POST', // Menggunakan POST / PUT yang valid untuk npoint
+                    method: 'POST',
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(systemSchedules)
                 });
@@ -219,7 +220,10 @@
                             <small style="color:#f59e0b;">${item.hariTgl || ''} | ${item.waktu}</small><br>
                             <strong>${item.kegiatan}</strong> (${item.lokasi})
                         </div>
-                        <button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="isiFormEdit(${index})" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Edit</button>
+                            <button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>
+                        </div>
                     `;
                     managerList.appendChild(managerItem);
                 }
@@ -229,7 +233,25 @@
             if (shouldSave) saveDataToCloud();
         }
 
-        // TAMBAH DATA BARU
+        // FUNGSI ISI FORM SAAT TOMBOL EDIT DIKLIK
+        function isiFormEdit(index) {
+            const item = systemSchedules[index];
+            document.getElementById('inputHariTgl').value = item.hariTgl || '';
+            document.getElementById('inputWaktu').value = item.waktu || '';
+            document.getElementById('inputKegiatan').value = item.kegiatan || '';
+            document.getElementById('inputLokasi').value = item.lokasi || '';
+            
+            // Set index yang sedang diedit dan ubah tampilan tombol utama
+            editIndex = index;
+            const btnAdd = document.getElementById('btnAdd');
+            btnAdd.textContent = "💾 Simpan Perubahan";
+            btnAdd.style.backgroundColor = "#f39c12";
+            
+            // Scroll ke arah form input di dalam modal agar operator fokus
+            document.querySelector('.modal-content').scrollTop = 0;
+        }
+
+        // SIMPAN DATA JADWAL (BISA TAMBAH BARU / UPDATE DATA EDIT)
         async function addNewSchedule() {
             const hariTgl = document.getElementById('inputHariTgl').value.trim();
             const waktu = document.getElementById('inputWaktu').value.trim();
@@ -240,118 +262,149 @@
                 return alert("Isi dengan benar! Contoh format waktu: 08:30 - 12:00");
             }
 
-            document.getElementById('btnAdd').disabled = true;
-            systemSchedules.push({ hariTgl, waktu, kegiatan, lokasi });
+            const btnAdd = document.getElementById('btnAdd');
+            btnAdd.disabled = true;
+
+            if (editIndex === -1) {
+                // Mode Tambah Jadwal Baru
+                systemSchedules.push({ hariTgl, waktu, kegiatan, lokasi });
+            } else {
+                // Mode Update Jadwal yang Sudah Ada
+                systemSchedules[editIndex] = { hariTgl, waktu, kegiatan, lokasi };
+                editIndex = -1; // Reset kembali ke mode tambah
+                btnAdd.textContent = "＋ Tambahkan ke Semua Layar";
+                btnAdd.style.backgroundColor = "#10b981";
+            }
+
             renderSchedules(true);
 
+            // Bersihkan form input kembali kosong
             document.getElementById('inputHariTgl').value = '';
             document.getElementById('inputWaktu').value = '';
             document.getElementById('inputKegiatan').value = '';
             document.getElementById('inputLokasi').value = '';
-            document.getElementById('btnAdd').disabled = false;
+            btnAdd.disabled = false;
         }
 
         function deleteSchedule(index) {
             if (confirm("Hapus jadwal ini?")) {
+                // Jika sedang mengedit jadwal yang dihapus, reset status form ke tambah baru
+                if (editIndex === index) {
+                    editIndex = -1;
+                    const btnAdd = document.getElementById('btnAdd');
+                    btnAdd.textContent = "＋ Tambahkan ke Semua Layar";
+                    btnAdd.style.backgroundColor = "#10b981";
+                    document.getElementById('inputHariTgl').value = '';
+                    document.getElementById('inputWaktu').value = '';
+                    document.getElementById('inputKegiatan').value = '';
+                    document.getElementById('inputLokasi').value = '';
+                }
                 systemSchedules.splice(index, 1);
                 renderSchedules(true);
             }
         }
 
-      // HITUNG STATUS BADGE OTOMATIS (VERSI AMAN & ANTI-CRASH)
-function updateStatusBadges(currentHour, currentMinute) {
-    const now = new Date();
-    const hariIniMurni = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        // HITUNG STATUS BADGE OTOMATIS (VERSI AMAN & ANTI-CRASH)
+        function updateStatusBadges(currentHour, currentMinute) {
+            const now = new Date();
+            const hariIniMurni = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
-        // Menggunakan try-catch di dalam loop agar jika 1 baris data error, baris lain tetap berjalan
-        try {
-            const timeRange = row.getAttribute('data-time');
-            if (!timeRange || !timeRange.includes('-')) return;
+            document.querySelectorAll('#main-table-body tr[data-time]').forEach(row => {
+                try {
+                    const timeRange = row.getAttribute('data-time');
+                    if (!timeRange || !timeRange.includes('-')) return;
 
-            const colTimeText = row.querySelector('.col-time div').textContent || '';
-            const badge = row.querySelector('.status-badge');
-            if (!badge) return;
+                    const colTimeText = row.querySelector('.col-time div').textContent || '';
+                    const badge = row.querySelector('.status-badge');
+                    if (!badge) return;
 
-            // Default fallback jika pembacaan tanggal gagal: dianggap hari ini
-            let tglAgenda = new Date(hariIniMurni); 
+                    let tglAgenda = new Date(hariIniMurni); 
 
-            if (colTimeText) {
-                const daftarBulan = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-                const teksBersih = colTimeText.toLowerCase();
-                
-                const matchTanggal = teksBersih.match(/\b\d{1,2}\b/);
-                let indexBulan = -1;
-                
-                daftarBulan.forEach((bln, idx) => {
-                    if (teksBersih.includes(bln)) indexBulan = idx;
-                });
+                    if (colTimeText) {
+                        const daftarBulan = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+                        const teksBersih = colTimeText.toLowerCase();
+                        
+                        const matchTanggal = teksBersih.match(/\b\d{1,2}\b/);
+                        let indexBulan = -1;
+                        
+                        daftarBulan.forEach((bln, idx) => {
+                            if (teksBersih.includes(bln)) indexBulan = idx;
+                        });
 
-                const matchTahun = teksBersih.match(/\b20\d{2}\b/);
-                const tahunAgenda = matchTahun ? parseInt(matchTahun[0]) : now.getFullYear();
+                        const matchTahun = teksBersih.match(/\b20\d{2}\b/);
+                        const tahunAgenda = matchTahun ? parseInt(matchTahun[0]) : now.getFullYear();
 
-                // Hanya ubah tanggal jika format regex tanggal dan bulan ditemukan
-                if (matchTanggal && indexBulan !== -1) {
-                    const tglAngka = parseInt(matchTanggal[0]);
-                    const cekTanggalValid = new Date(tahunAgenda, indexBulan, tglAngka);
+                        if (matchTanggal && indexBulan !== -1) {
+                            const tglAngka = parseInt(matchTanggal[0]);
+                            const cekTanggalValid = new Date(tahunAgenda, indexBulan, tglAngka);
+                            
+                            if (!isNaN(cekTanggalValid.getTime())) {
+                                tglAgenda = cekTanggalValid;
+                            }
+                        }
+                    }
+
+                    const cleanTimeRange = timeRange.replace(/\./g, ':');
+                    const [startTime, endTime] = cleanTimeRange.split('-');
                     
-                    // Pastikan objek tanggal benar-benar valid sebelum digunakan
-                    if (!isNaN(cekTanggalValid.getTime())) {
-                        tglAgenda = cekTanggalValid;
+                    const [jamMulai, menitMulai] = startTime.split(':').map(Number);
+                    const [jamSelesai, menitSelesai] = endTime.split(':').map(Number);
+
+                    if (isNaN(jamMulai) || isNaN(jamSelesai)) {
+                        badge.textContent = 'Format Jam Salah';
+                        badge.className = 'status-badge status-waiting';
+                        return; 
+                    }
+
+                    const waktuMulaiLengkap = new Date(tglAgenda).setHours(jamMulai, menitMulai || 0, 0, 0);
+                    const waktuSelesaiLengkap = new Date(tglAgenda).setHours(jamSelesai, menitSelesai || 0, 0, 0);
+                    const waktuSekarangLengkap = now.getTime();
+
+                    badge.className = 'status-badge';
+                    
+                    if (waktuSekarangLengkap > waktuSelesaiLengkap) {
+                        badge.textContent = 'Selesai';
+                        badge.className = 'status-badge status-done';
+                    } else if (waktuSekarangLengkap >= waktuMulaiLengkap && waktuSekarangLengkap <= waktuSelesaiLengkap) {
+                        badge.textContent = 'Berlangsung';
+                        badge.className = 'status-badge status-ongoing';
+                    } else {
+                        badge.textContent = 'Menunggu';
+                        badge.className = 'status-badge status-waiting';
+                    }
+
+                } catch (error) {
+                    console.error("Terjadi kesalahan pembacaan baris jadwal:", error);
+                    const badgeGagal = row.querySelector('.status-badge');
+                    if (badgeGagal) {
+                        badgeGagal.textContent = 'Menunggu';
+                        badgeGagal.className = 'status-badge status-waiting';
                     }
                 }
-            }
-
-            // Ekstrak Jam Mulai dan Selesai
-            const cleanTimeRange = timeRange.replace(/\./g, ':');
-            const [startTime, endTime] = cleanTimeRange.split('-');
-            
-            const [jamMulai, menitMulai] = startTime.split(':').map(Number);
-            const [jamSelesai, menitSelesai] = endTime.split(':').map(Number);
-
-            // Validasi proteksi jika konversi jam menghasilkan NaN
-            if (isNaN(jamMulai) || isNaN(jamSelesai)) {
-                badge.textContent = 'Format Jam Salah';
-                badge.className = 'status-badge status-waiting';
-                return; 
-            }
-
-            const waktuMulaiLengkap = new Date(tglAgenda).setHours(jamMulai, menitMulai || 0, 0, 0);
-            const waktuSelesaiLengkap = new Date(tglAgenda).setHours(jamSelesai, menitSelesai || 0, 0, 0);
-            const waktuSekarangLengkap = now.getTime();
-
-            badge.className = 'status-badge';
-            
-            if (waktuSekarangLengkap > waktuSelesaiLengkap) {
-                badge.textContent = 'Selesai';
-                badge.className = 'status-badge status-done';
-            } else if (waktuSekarangLengkap >= waktuMulaiLengkap && waktuSekarangLengkap <= waktuSelesaiLengkap) {
-                badge.textContent = 'Berlangsung';
-                badge.className = 'status-badge status-ongoing';
-            } else {
-                badge.textContent = 'Menunggu';
-                badge.className = 'status-badge status-waiting';
-            }
-
-        } catch (error) {
-            // Jika ada error fatal tersembunyi pada baris ini, tangkap di sini agar aplikasi utama tidak mati
-            console.error("Terjadi kesalahan pembacaan baris jadwal:", error);
-            const badgeGagal = row.querySelector('.status-badge');
-            if (badgeGagal) {
-                badgeGagal.textContent = 'Menunggu';
-                badgeGagal.className = 'status-badge status-waiting';
-            }
+            });
         }
-    });
-}
-        function toggleModal(show) { document.getElementById('settingModal').classList.toggle('active', show); }
+        
+        function toggleModal(show) { 
+            // Jika modal ditutup, reset paksa form dari mode edit ke mode tambah biasa
+            if (!show && editIndex !== -1) {
+                editIndex = -1;
+                const btnAdd = document.getElementById('btnAdd');
+                btnAdd.textContent = "＋ Tambahkan ke Semua Layar";
+                btnAdd.style.backgroundColor = "#10b981";
+                document.getElementById('inputHariTgl').value = '';
+                document.getElementById('inputWaktu').value = '';
+                document.getElementById('inputKegiatan').value = '';
+                document.getElementById('inputLokasi').value = '';
+            }
+            document.getElementById('settingModal').classList.toggle('active', show); 
+        }
 
         // EKSEKUSI INTERVAL JALAN UTAMA
         setInterval(updateDateTime, 1000);
         updateDateTime();
         loadDataFromCloud();
 
-        // TV Tizen & perangkat lain akan otomatis download pembaruan database tiap 5 detik background tanpa refresh halaman!
+        // Singkronisasi background tiap 5 detik
         setInterval(loadDataFromCloud, 5000);
     </script>
 </body>
