@@ -262,20 +262,28 @@
 function jalurCadanganTizenLokal(teks) {
     try {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); 
+            window.speechSynthesis.cancel(); // Bersihkan antrean suara yang macet
 
             const speech = new SpeechSynthesisUtterance(teks);
             speech.lang = 'id-ID';
-            speech.rate = 0.95; 
             
-            // PENTING: Jika TV memaksa pakai suara laki-laki internalnya, 
-            // nilainya kita dongkrak ke 1.5 agar frekuensinya melengking seperti wanita.
-            speech.pitch = 1.5; 
+            // --- TAKTIK MANIPULASI AGRESIF UNTUK TV TIZEN ---
+            speech.rate = 0.85;  // Diperlambat agar artikulasinya jelas dan anggun
+            speech.pitch = 1.7;   // DIBAWA KE TITIK EKSTREM (Normalnya 1.0, kita paksa ke 1.7 agar melengking menjadi suara wanita)
+            speech.volume = 1.0;  // Volume maksimal
+
+            // Cari dan kunci paksa jika ada library ID lain di dalam firmware TV
+            const voices = window.speechSynthesis.getVoices();
+            const indonesianVoice = voices.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
+            if (indonesianVoice) {
+                speech.voice = indonesianVoice;
+            }
 
             window.speechSynthesis.speak(speech);
+            console.log("Manipulasi pitch ekstrem berhasil ditembakkan ke TV Tizen.");
         }
     } catch (e) {
-        console.error("Jalur cadangan gagal:", e);
+        console.error("Gagal memanipulasi suara internal TV:", e);
     }
 }
         async function loadDataFromCloud() {
