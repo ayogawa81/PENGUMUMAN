@@ -227,9 +227,8 @@
             try {
                 audioSistemValid = true;
                 
-                // Pancing inisialisasi Web Audio murni (Pasti sukses di semua browser TV)
-                bunyikanBeepDigitalMurni(660, 0.1);
-                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.15), 150);
+                // Pancing inisialisasi Web Audio murni (Tes Nada Selamat Datang)
+                bunyikanNadaChimeKomando("mulai");
 
                 const unlocker = document.getElementById('tizenAudioUnlocker');
                 if(unlocker) {
@@ -241,8 +240,8 @@
             }
         }
 
-        // GENERATOR NADA BEL DIGITAL MURNI - Kebal dari pembekuan sistem / CORS / File Rusak
-        function bunyikanBeepDigitalMurni(frekuensi = 800, durasi = 0.3) {
+        // GENERATOR NADA CHIME INTERNAL (100% Mandiri, Kebal Blokir & Sangat Lantang)
+        function buatSuaraBeepMurni(frekuensi, durasi, jenisGelombang = 'sine') {
             if (!audioSistemValid) return;
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -252,21 +251,41 @@
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 
-                oscillator.type = 'sine';
+                oscillator.type = jenisGelombang;
                 oscillator.frequency.setValueAtTime(frekuensi, audioCtx.currentTime);
                 
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                // Efek fade out halus agar suara renyah
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + durasi);
+                gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durasi);
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
                 
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + durasi);
-            } catch(e){
-                console.log("Audio API belum siap.");
-            }
+            } catch(e){}
+        }
+
+        // VARIASI POLA ALARM BERDASARKAN STATUS JADWAL
+        function bunyikanNadaChimeKomando(tipeStatus) {
+            if (!audioSistemValid) return;
+            try {
+                if (tipeStatus === "berlangsung") {
+                    // Pola Status Berlangsung: Nada Arpeggio Naik (Tegas & Memanggil)
+                    buatSuaraBeepMurni(523.25, 0.2, 'triangle'); // Nada C5
+                    setTimeout(() => buatSuaraBeepMurni(659.25, 0.2, 'triangle'), 150); // Nada E5
+                    setTimeout(() => buatSuaraBeepMurni(783.99, 0.3, 'sine'), 300);    // Nada G5
+                } 
+                else if (tipeStatus === "selesai") {
+                    // Pola Status Selesai: Nada Ganda Turun (Pemberitahuan Penutupan)
+                    buatSuardBeepMurni(783.99, 0.15, 'sine'); // Nada G5
+                    setTimeout(() => buatSuaraBeepMurni(523.25, 0.3, 'sine'), 150);   // Nada C5
+                } 
+                else {
+                    // Pola Default / Pancingan Awal: Beep Ganda Standar
+                    buatSuaraBeepMurni(880, 0.15, 'sine');
+                    setTimeout(() => buatSuaraBeepMurni(880, 0.15, 'sine'), 150);
+                }
+            } catch(e){}
         }
 
         function updateDateTime() {
@@ -285,30 +304,6 @@
 
                 checkAndAutoCleanSchedules();
             } catch(err) { console.error(err); }
-        }
-
-        // AMAN & KEBAL FREEZE: Kombinasi suara bel murni + Fallback Google TTS
-        function eksekusiPengumumanSuara(teks) {
-            if (!audioSistemValid) return;
-            try {
-                // Pola nada bel perhatian: Beep ganda tinggi pendek
-                bunyikanBeepDigitalMurni(880, 0.15);
-                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.25), 200);
-
-                // Tarik suara AI Google via elemen audio mandiri yang diisolasi (Mencegah Crash utama)
-                setTimeout(() => {
-                    try {
-                        const urlTTS = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(teks)}`;
-                        const audioAlat = new Audio();
-                        audioAlat.src = urlTTS;
-                        audioAlat.volume = 1.0;
-                        audioAlat.play().catch(e => console.log("TTS dibatasi TV."));
-                    } catch(inner){}
-                }, 800);
-
-            } catch (e) { 
-                console.error("Audio error caught safely to prevent freeze."); 
-            }
         }
 
         async function loadDataFromCloud() {
@@ -471,7 +466,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            eksekusiPengumumanSuara(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`); 
+                            bunyikanNadaChimeKomando("selesai"); // BUNYIKAN CHIME SELESAI
                         }
                         dataBerubah = true;
                         return false; 
@@ -513,16 +508,11 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                eksekusiPengumumanSuara(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sedang berlangsung.`);
+                                bunyikanNadaChimeKomando("berlangsung"); // BUNYIKAN CHIME BERLANGSUNG
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
                             badge.className = 'status-badge status-waiting';
-
-                            if (!spokenSchedules.has(`${baseKey}-menunggu`)) {
-                                spokenSchedules.add(`${baseKey}-menunggu`);
-                                eksekusiPengumumanSuara(`Pemberitahuan, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} dalam status menunggu.`);
-                            }
                         }
                     } catch(innerError){}
                 });
