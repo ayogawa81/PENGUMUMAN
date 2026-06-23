@@ -208,20 +208,27 @@
                 setInterval(() => { try { updateDateTime(); } catch(e){} }, 1000);
                 setInterval(() => { try { autoScrollTable(); } catch(e){} }, 40);
                 
+                try {
+                    const localData = localStorage.getItem("LOCAL_JWS_DATA");
+                    if(localData) {
+                        systemSchedules = JSON.parse(localData) || [];
+                        renderSchedules(false);
+                    }
+                } catch(err){}
+
                 loadDataFromCloud();
                 setInterval(() => { try { loadDataFromCloud(); } catch(e){} }, 10000);
             } catch(e) {
-                console.error("Init Error: ", e);
+                console.error("Init Error bypassed.");
             }
         }
 
-        // AMAN TOTAL: Fungsi hilangkan overlay dipastikan mandiri tanpa hambatan fungsi lain
         function bukaKunciAudioTizen() {
             try {
                 tizenAudioValid = true;
                 const unlocker = document.getElementById('tizenAudioUnlocker');
                 if(unlocker) {
-                    unlocker.style.display = 'none';
+                    unlocker.style.setProperty('display', 'none', 'important');
                 }
                 
                 if ('speechSynthesis' in window) {
@@ -254,28 +261,6 @@
             } catch(err) { console.error(err); }
         }
 
-        function playBeepSound(callback) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) { if (callback) callback(); return; }
-                const audioCtx = new AudioContext();
-                
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'sine'; 
-                oscillator.frequency.value = 880; 
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-                
-                oscillator.connect(gainNode); 
-                gainNode.connect(audioCtx.destination);
-                oscillator.start(); 
-                oscillator.stop(audioCtx.currentTime + 0.3);
-                
-                setTimeout(() => { if (callback) callback(); }, 350);
-            } catch (e) { if (callback) callback(); }
-        }
-
         function panggilSuaraAI(teks) {
             if (!tizenAudioValid) return;
             try {
@@ -302,8 +287,11 @@
                 }
             } catch (e) {
                 try {
-                    systemSchedules = JSON.parse(localStorage.getItem("LOCAL_JWS_DATA")) || [];
-                    renderSchedules(false);
+                    const cached = localStorage.getItem("LOCAL_JWS_DATA");
+                    if(cached) {
+                        systemSchedules = JSON.parse(cached) || [];
+                        renderSchedules(false);
+                    }
                 } catch(err){}
             }
         }
@@ -385,7 +373,6 @@
             }
         }
 
-        // PERBAIKAN TOTAL SENSITIVITAS DATA: Kebal crash jika objek null atau parsing gagal
         function urutkanJadwalSistem() {
             try {
                 if (!Array.isArray(systemSchedules) || systemSchedules.length <= 1) return;
@@ -448,9 +435,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            playBeepSound(() => { 
-                                panggilSuaraAI(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`); 
-                            });
+                            panggilSuaraAI(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`); 
                         }
                         dataBerubah = true;
                         return false; 
@@ -492,7 +477,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                playBeepSound(() => { panggilSuaraAI(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sedang berlangsung.`); });
+                                panggilSuaraAI(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sedang berlangsung.`);
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
@@ -500,7 +485,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-menunggu`)) {
                                 spokenSchedules.add(`${baseKey}-menunggu`);
-                                playBeepSound(() => { panggilSuaraAI(`Pemberitahuan, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} dalam status menunggu.`); });
+                                panggilSuaraAI(`Pemberitahuan, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} dalam status menunggu.`);
                             }
                         }
                     } catch(innerError){}
@@ -514,15 +499,15 @@
                 const managerList = document.getElementById('managerList');
                 if (!mainTbody) return;
                 
-                // Urutkan dengan aman
-                urutkanJadwalSistem();
+                if (Array.isArray(systemSchedules) && systemSchedules.length > 0) {
+                    urutkanJadwalSistem();
+                }
 
                 mainTbody.innerHTML = ''; 
                 if(managerList) managerList.innerHTML = '';
 
                 if (!Array.isArray(systemSchedules) || systemSchedules.length === 0) {
                     mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 40px;">Tidak ada agenda kegiatan saat ini. Klik Setting untuk menambah.</td></tr>`;
-                    if (shouldSave) saveDataToCloud();
                     return;
                 }
 
@@ -563,7 +548,9 @@
                 refreshBadgesOnly();
 
                 if (shouldSave) saveDataToCloud();
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.error("Render error safety triggered."); 
+            }
         }
 
         function isiFormEdit(index) {
@@ -668,7 +655,6 @@
             } catch(e){}
         }
 
-        // Pemicu inisialisasi sistem utama
         initSystem();
     </script>
 </body>
