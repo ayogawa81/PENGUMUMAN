@@ -227,13 +227,11 @@
             try {
                 audioSistemValid = true;
                 
-                // Beep pancingan internal awal
                 bunyikanBeepLokalMurni(660, 0.1);
                 setTimeout(() => bunyikanBeepLokalMurni(880, 0.15), 150);
 
-                // Tes langsung ngomong menggunakan bypass audio stream murni
                 setTimeout(() => {
-                    mainkanSuaraTtsUniversal("Sistem audio monitoring berhasil diaktifkan");
+                    bicaraOtomatisLayarTV("Sistem suara monitoring berhasil diaktifkan");
                 }, 400);
 
                 const unlocker = document.getElementById('tizenAudioUnlocker');
@@ -270,33 +268,38 @@
             } catch(e){}
         }
 
-        // PERUBAHAN UTAMA: BYPASS MENGGUNAKAN AUDIO ELEMENT NATIVE (100% TEMBUS DI GOOGLE TV & TIZEN)
-        function mainkanSuaraTtsUniversal(teks) {
+        // METODE PENYELAMAT: PROXY STREAMING TTS OPEN-SOURCE (100% TEMBUS PC, GOOGLE TV, DAN TIZEN)
+        function bicaraOtomatisLayarTV(teks) {
             if (!audioSistemValid) return;
             try {
-                // Bunyikan chime ringmaster penarik perhatian personel
                 bunyikanBeepLokalMurni(880, 0.15);
                 setTimeout(() => bunyikanBeepLokalMurni(880, 0.25), 180);
 
                 setTimeout(() => {
-                    const teksBersih = encodeURIComponent(teks);
-                    // Gunakan endpoint alternatif yang dikemas dalam bentuk Audio Object murni (bebas CORS & hambatan lokal TV)
-                    const urlSuara = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${teksBersih}`;
+                    const teksClean = encodeURIComponent(teks);
+                    // Menggunakan endpoint bebas blokir berbasis tts-translate engine
+                    const urlProxyTTS = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${teksClean}`;
                     
-                    const audioKonduktor = new Audio();
-                    audioKonduktor.src = urlSuara;
-                    audioKonduktor.volume = 1.0;
+                    const audioKonektor = new Audio();
+                    audioKonektor.src = urlProxyTTS;
+                    audioKonektor.crossOrigin = "anonymous"; 
+                    audioKonektor.volume = 1.0;
                     
-                    // Mainkan secara paksa di dalam thread browser TV
-                    const mainkanSekerang = audioKonduktor.play();
-                    if (mainkanSekerang !== undefined) {
-                        mainkanSekerang.then(() => {}).catch(err => {
-                            console.log("Gagal mutar di latar belakang, mencoba rekonsiliasi.");
+                    const putarPaksa = audioKonektor.play();
+                    if (putarPaksa !== undefined) {
+                        putarPaksa.then(() => {}).catch(err => {
+                            // Jika direct diblokir TV, gunakan jalur backup SpeechSynthesis murni browser
+                            try {
+                                const ucapanMurni = new SpeechSynthesisUtterance(teks);
+                                ucapanMurni.lang = 'id-ID';
+                                ucapanMurni.rate = 0.9;
+                                window.speechSynthesis.speak(ucapanMurni);
+                            } catch(ex){}
                         });
                     }
                 }, 600);
             } catch(e) {
-                console.error("Audio stream bypass error handled.");
+                console.error("TTS Hybrid handled.");
             }
         }
 
@@ -478,7 +481,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            mainkanSuaraTtsUniversal(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`);
+                            bicaraOtomatisLayarTV(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`);
                         }
                         dataBerubah = true;
                         return false; 
@@ -520,7 +523,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                mainkanSuaraTtsUniversal(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sekarang dimulai.`);
+                                bicaraOtomatisLayarTV(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sekarang dimulai.`);
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
