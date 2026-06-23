@@ -36,7 +36,6 @@
         }
         .btn-setting:hover { background-color: #3b82f6; border-color: #3b82f6; }
         
-        /* STRUKTUR MAIN UNTUK PENGATURAN TINGGI MAKSIMAL DISPLAY */
         main { 
             flex: 1; 
             padding: 40px; 
@@ -57,20 +56,17 @@
             max-height: 100%;
         }
 
-        /* PEMBUNGKUS HEADER AGAR TIDAK IKUT TERGULUNG */
         .table-header-wrapper {
             background-color: #0f172a;
             z-index: 2;
         }
         
-        /* PEMBUNGKUS SCROLL OTOMATIS */
         .table-body-wrapper {
             overflow-y: auto;
             flex: 1;
             scroll-behavior: smooth;
         }
         
-        /* MENYEMBUNYIKAN SCROLLBAR BAWAAN BROWSER TV/PC */
         .table-body-wrapper::-webkit-scrollbar {
             display: none;
         }
@@ -81,7 +77,6 @@
         tr:nth-child(even) { background-color: #1e293b; }
         tr:nth-child(odd) { background-color: #162238; }
         
-        /* PENATAAN DAN UKURAN LEBAR KOLOM JADWAL */
         .col-time { font-weight: bold; color: #f59e0b; width: 25%; }
         .col-event { width: 40%; font-weight: 500; }
         .col-room { width: 20%; color: #cbd5e1; }
@@ -92,7 +87,6 @@
         .status-waiting { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
         .status-done { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
 
-        /* MODAL PANEL */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.75);
             display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s ease;
@@ -161,51 +155,3 @@
                     </thead>
                 </table>
             </div>
-            
-            <div class="table-body-wrapper" id="scrollContainer">
-                <table>
-                    <tbody id="main-table-body">
-                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke Database Online Global...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
-
-    <div class="modal-overlay" id="settingModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Pengaturan Jadwal Global (Online Database)</h2>
-                <button class="btn-close" onclick="toggleModal(false)">✕</button>
-            </div>
-            <div class="form-group">
-                <div class="form-row">
-                    <input type="text" id="inputHariTgl" placeholder="Contoh: Senin, 15 Juni">
-                    <input type="text" id="inputWaktu" placeholder="Contoh: 08:30 - 12:00">
-                </div>
-                <input type="text" id="inputKegiatan" placeholder="Nama Agenda / Kegiatan Utama">
-                <input type="text" id="inputLokasi" placeholder="Lokasi Ruang / Tempat">
-            </div>
-            <button class="btn-add" id="btnAdd" onclick="addNewSchedule()">＋ Tambahkan ke Semua Layar</button>
-            <div class="schedule-manager-list" id="managerList"></div>
-        </div>
-    </div>
-
-    <script>
-        const dbURL = "https://api.npoint.io/79fb87bf4e7964927964";
-        
-        let systemSchedules = [];
-        let currentHours = "00";
-        let currentMinutes = "00";
-        let editIndex = -1;
-        let spokenSchedules = new Set();
-        let tizenAudioValid = false;
-
-        // --- SISTEM AUTOMATIC CONTINUOUS SCROLL ---
-        const container = document.getElementById('scrollContainer');
-        let scrollSpeed = 1;      // Kecepatan gulir (pixel per langkah)
-        let scrollDirection = 1;  // 1 = ke bawah, -1 = kembali ke atas
-        let scrollDelay = 3000;   // Durasi jeda di bagian paling atas/bawah (3 detik)
-        let isDelayed = false;
-
-        function autoScrollTable() {
