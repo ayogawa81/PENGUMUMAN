@@ -228,84 +228,65 @@
             }
         }
 
-  function panggilSuaraAI(teks) {
+    function panggilSuaraAI(teks) {
     if (!tizenAudioValid) return;
 
+    // 1. OPSI UTAMA: MENGGUNAKAN VOICE RSS (SUARA WANITA INDONESIA - INTAN)
     try {
-        console.log("Memanggil Suara Wanita Jalur Direct Bypass...");
+        console.log("Mencoba Voice RSS (Suara Wanita): " + teks);
         const player = document.getElementById('globalAudioPlayer');
         
-        // Menggunakan engine translate khusus (tl=id) dengan aksen wanita standar Google
-        // client=tw-ob adalah jalur tercepat yang biasanya lolos dari sensor browser TV
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(teks)}`;
+        // MASUKKAN API KEY VOICE RSS ANDA DI SINI
+        const apiKey = "1dcaf4a9430148c3acf148035b135cbf"; 
         
-        player.pause();
+        // v=Intan adalah konfigurasi untuk suara wanita Indonesia yang jernih
+        const url = `https://api.voicerss.org/?key=${apiKey}&hl=id-id&v=Intan&c=mp3&f=16khz_16bit_stereo&src=${encodeURIComponent(teks)}`;
+        
         player.src = url;
         player.load();
         
         setTimeout(() => {
-            player.play().then(() => {
-                console.log("Suara wanita berhasil keluar.");
-            }).catch(err => {
-                console.warn("Jalur Google diblokir Tizen, terpaksa menaikkan pitch suara internal TV...", err);
-                // Jika masih membandel, jalankan cadangan dengan PITCH TINGGI (Suara Wanita Buatan)
-                jalurCadanganTizenLokal(teks); 
+            player.play().catch(err => {
+                console.warn("Voice RSS diblokir Tizen, beralih ke jalur cadangan lokal...", err);
+                jalurCadanganTizenLokal(teks); // Pindah ke jalur cadangan jika error
             });
         }, 300);
 
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Gagal memuat Voice RSS, mencoba jalur cadangan...", error);
         jalurCadanganTizenLokal(teks);
     }
 }
 
+// 2. JALUR CADANGAN: MENGGUNAKAN SPEECH SYNTHESIS INTERNAL BROWSER TIZEN
 function jalurCadanganTizenLokal(teks) {
     try {
-        if (!('speechSynthesis' in window)) return;
+        if ('speechSynthesis' in window) {
+            console.log("Menjalankan TTS Cadangan Internal TV...");
+            window.speechSynthesis.cancel(); // Bersihkan antrean yang macet
 
-        window.speechSynthesis.cancel(); // Hentikan suara yang sedang macet
-
-        const eksekusiSuara = () => {
             const speech = new SpeechSynthesisUtterance(teks);
             speech.lang = 'id-ID';
-            
-            // MANIPULASI NADA EKSTREM (PITCH)
-            speech.rate = 0.85;  
-            speech.pitch = 1.6;  // Naikkan ke 1.6 atau 1.7 agar suara cowok lokal jadi melengking/feminin
-            speech.volume = 1.0;
+            speech.rate = 0.9; // Sedikit diperlambat agar artikulasi di TV lebih jelas
+            speech.pitch = 1.1; // Nada sedikit dinaikkan agar karakter suara lebih feminin
 
+            // Cari apakah sistem Tizen memiliki aset suara wanita lokal
             const voices = window.speechSynthesis.getVoices();
-            
-            // Cari suara Indonesia yang BUKAN laki-laki (menghindari nama David / Male)
-            let indonesianVoice = voices.find(voice => 
+            const femaleVoice = voices.find(voice => 
                 (voice.lang.includes('id') || voice.lang.includes('ID')) && 
-                !voice.name.toLowerCase().includes('david') && 
-                !voice.name.toLowerCase().includes('male')
+                (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('zira') || voice.name.toLowerCase().includes('google'))
             );
-
-            // Jika tidak ketemu yang spesifik, ambil saja suara Indonesia apa pun yang tersedia
-            if (!indonesianVoice) {
-                indonesianVoice = voices.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
-            }
-
-            if (indonesianVoice) {
-                speech.voice = indonesianVoice;
-                console.log("Mengunci suara lokal: " + indonesianVoice.name);
+            
+            if (femaleVoice) {
+                speech.voice = femaleVoice;
             }
 
             window.speechSynthesis.speak(speech);
-            console.log("Manipulasi pitch berhasil ditembakkan.");
-        };
-
-        // AKALAN AGAR DAFTAR SUARA TIDAK KOSONG (Krusial untuk Chrome, Edge & Tizen)
-        if (window.speechSynthesis.getVoices().length === 0) {
-            window.speechSynthesis.onvoiceschanged = eksekusiSuara;
         } else {
-            eksekusiSuara();
+            console.error("Browser TV ini benar-benar tidak mendukung Audio Web Speech.");
         }
-
     } catch (e) {
-        console.error("Gagal memanipulasi suara internal:", e);
+        console.error("Jalur cadangan pun gagal:", e);
     }
 }
         async function loadDataFromCloud() {
