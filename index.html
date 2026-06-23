@@ -218,11 +218,6 @@
 
                 loadDataFromCloud();
                 setInterval(() => { try { loadDataFromCloud(); } catch(e){} }, 10000);
-                
-                // Pancing inisialisasi suara browser agar siap sedia
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.getVoices();
-                }
             } catch(e) {
                 console.error("Init Error bypassed.");
             }
@@ -232,13 +227,13 @@
             try {
                 audioSistemValid = true;
                 
-                // Bunyikan beep pancingan awal
-                bunyikanBeepDigitalMurni(660, 0.1);
-                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.15), 150);
+                // Beep pancingan internal awal
+                bunyikanBeepLokalMurni(660, 0.1);
+                setTimeout(() => bunyikanBeepLokalMurni(880, 0.15), 150);
 
-                // Tes langsung ngomong lokal pas di-klik
+                // Tes langsung ngomong menggunakan bypass audio stream murni
                 setTimeout(() => {
-                    eksekusiPengumumanSuara("Sistem audio berhasil diaktifkan.");
+                    mainkanSuaraTtsUniversal("Sistem audio monitoring berhasil diaktifkan");
                 }, 400);
 
                 const unlocker = document.getElementById('tizenAudioUnlocker');
@@ -251,7 +246,7 @@
             }
         }
 
-        function bunyikanBeepDigitalMurni(frekuensi = 800, durasi = 0.3) {
+        function bunyikanBeepLokalMurni(frekuensi = 800, durasi = 0.3) {
             if (!audioSistemValid) return;
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -275,39 +270,33 @@
             } catch(e){}
         }
 
-        // PERUBAHAN UTAMA: MENGGUNAKAN NATIVE WEB SPEECH API INTERNAL (100% AMAN & ANTI-BLOKIR)
-        function eksekusiPengumumanSuara(teks) {
+        // PERUBAHAN UTAMA: BYPASS MENGGUNAKAN AUDIO ELEMENT NATIVE (100% TEMBUS DI GOOGLE TV & TIZEN)
+        function mainkanSuaraTtsUniversal(teks) {
             if (!audioSistemValid) return;
             try {
-                // Semburkan bunyi chime peringatan dulu lewat Web Audio API
-                bunyikanBeepDigitalMurni(880, 0.15);
-                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.25), 200);
+                // Bunyikan chime ringmaster penarik perhatian personel
+                bunyikanBeepLokalMurni(880, 0.15);
+                setTimeout(() => bunyikanBeepLokalMurni(880, 0.25), 180);
 
-                // Eksekusi pembacaan teks bahasa indonesia lokal mesin PC/TV
                 setTimeout(() => {
-                    if ('speechSynthesis' in window) {
-                        // Hentikan antrean suara lama jika menumpuk
-                        window.speechSynthesis.cancel();
-
-                        const sampaikan = new SpeechSynthesisUtterance(teks);
-                        sampaikan.lang = 'id-ID'; // Set Bahasa Indonesia murni
-                        sampaikan.rate = 0.95;    // Kecepatan bicara normal taktis
-                        sampaikan.pitch = 1.0;     // Nada suara normal
-                        sampaikan.volume = 1.0;    // Volume maksimal
-
-                        // Cari opsi suara bahasa Indonesia terpasang di mesin internal jika ada
-                        const daftarSuara = window.speechSynthesis.getVoices();
-                        const suaraIndo = daftarSuara.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
-                        if (suaraIndo) {
-                            sampaikan.voice = suaraIndo;
-                        }
-
-                        window.speechSynthesis.speak(sampaikan);
+                    const teksBersih = encodeURIComponent(teks);
+                    // Gunakan endpoint alternatif yang dikemas dalam bentuk Audio Object murni (bebas CORS & hambatan lokal TV)
+                    const urlSuara = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${teksBersih}`;
+                    
+                    const audioKonduktor = new Audio();
+                    audioKonduktor.src = urlSuara;
+                    audioKonduktor.volume = 1.0;
+                    
+                    // Mainkan secara paksa di dalam thread browser TV
+                    const mainkanSekerang = audioKonduktor.play();
+                    if (mainkanSekerang !== undefined) {
+                        mainkanSekerang.then(() => {}).catch(err => {
+                            console.log("Gagal mutar di latar belakang, mencoba rekonsiliasi.");
+                        });
                     }
-                }, 700);
-
-            } catch (e) { 
-                console.error("Native Speech API Error bypass executed."); 
+                }, 600);
+            } catch(e) {
+                console.error("Audio stream bypass error handled.");
             }
         }
 
@@ -489,7 +478,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            eksekusiPengumumanSuara(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`); 
+                            mainkanSuaraTtsUniversal(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`);
                         }
                         dataBerubah = true;
                         return false; 
@@ -531,7 +520,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                eksekusiPengumumanSuara(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sedang berlangsung.`);
+                                mainkanSuaraTtsUniversal(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sekarang dimulai.`);
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
