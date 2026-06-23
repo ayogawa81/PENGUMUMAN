@@ -92,8 +92,8 @@
 
     <div id="tizenAudioUnlocker">
         <h1 style="font-size: 2.5rem; margin-bottom: 15px; color: #3b82f6; font-weight: 800;">SISTEM MONITORING JADWAL</h1>
-        <p style="font-size: 1.3rem; margin-bottom: 30px; color: #94a3b8; max-width: 500px;">Harap klik tombol di bawah ini menggunakan remote atau mouse agar TV Tizen & Browser mengizinkan suara pengumuman AI aktif.</p>
-        <button onclick="bukaKunciAudioTizen()" style="padding: 18px 45px; font-size: 1.5rem; font-weight: bold; background-color: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 10px 25px rgba(16,185,129,0.4);">
+        <p style="font-size: 1.3rem; margin-bottom: 30px; color: #94a3b8; max-width: 500px;">Harap klik tombol di bawah ini menggunakan remote atau mouse agar TV mengizinkan suara pengumuman AI aktif.</p>
+        <button onclick="bukaKunciAudioGlobal()" style="padding: 18px 45px; font-size: 1.5rem; font-weight: bold; background-color: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 10px 25px rgba(16,185,129,0.4);">
             🔊 AKTIFKAN SUARA DISPLAY
         </button>
     </div>
@@ -162,13 +162,17 @@
         let systemSchedules = [];
         let editIndex = -1;
         let spokenSchedules = new Set();
-        let tizenAudioValid = false;
+        let audioSistemValid = false;
         let isSaving = false;
+        let pancinganAudio = null;
 
         let scrollSpeed = 1;      
         let scrollDirection = 1;  
         let scrollDelay = 3000;   
         let isDelayed = false;
+
+        // Audio Bisu (Silent 1 Detik) dalam bentuk Base64 untuk memancing Google TV agar membuka kunci audio
+        const silentAudioSrc = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD";
 
         function autoScrollTable() {
             try {
@@ -223,17 +227,27 @@
             }
         }
 
-        function bukaKunciAudioTizen() {
+        // SOLUSI KRITIKAL GOOGLE TV: Mainkan objek Audio HTML bersamaan dengan SpeechSynthesis
+        function bukaKunciAudioGlobal() {
             try {
-                tizenAudioValid = true;
+                audioSistemValid = true;
+                
+                // 1. Pancing dengan memutar Audio HTML murni (wajib untuk Google TV)
+                pancinganAudio = new Audio(silentAudioSrc);
+                pancinganAudio.play().then(() => {
+                    console.log("Gerbang Audio Google TV Terbuka.");
+                }).catch(e => console.log(e));
+
+                // 2. Hilangkan overlay layar kunci
                 const unlocker = document.getElementById('tizenAudioUnlocker');
                 if(unlocker) {
                     unlocker.style.setProperty('display', 'none', 'important');
                 }
                 
+                // 3. Tes Suara AI Google TV
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    const speech = new SpeechSynthesisUtterance("Sistem monitor aktif.");
+                    const speech = new SpeechSynthesisUtterance("Sistem monitor dan suara telah aktif.");
                     speech.lang = 'id-ID';
                     window.speechSynthesis.speak(speech);
                 }
@@ -262,8 +276,13 @@
         }
 
         function panggilSuaraAI(teks) {
-            if (!tizenAudioValid) return;
+            if (!audioSistemValid) return;
             try {
+                // Sentuhan Google TV: Putar ulang audio pancingan sebelum text-to-speech jalan
+                if(pancinganAudio) {
+                    pancinganAudio.play().catch(e => {});
+                }
+
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const speech = new SpeechSynthesisUtterance(teks);
