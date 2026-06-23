@@ -227,8 +227,8 @@
             try {
                 audioSistemValid = true;
                 
-                // Pancing inisialisasi Web Audio murni (Tes Nada Selamat Datang)
-                bunyikanNadaChimeKomando("mulai");
+                // Mainkan nada sambutan awal murni
+                bunyikanNadaSandiKomando("mulai");
 
                 const unlocker = document.getElementById('tizenAudioUnlocker');
                 if(unlocker) {
@@ -240,7 +240,7 @@
             }
         }
 
-        // GENERATOR NADA CHIME INTERNAL (100% Mandiri, Kebal Blokir & Sangat Lantang)
+        // DIGITAL CHIME GENERATOR - Berjalan lokal, bebas pemblokiran CORS internet
         function buatSuaraBeepMurni(frekuensi, durasi, jenisGelombang = 'sine') {
             if (!audioSistemValid) return;
             try {
@@ -254,7 +254,7 @@
                 oscillator.type = jenisGelombang;
                 oscillator.frequency.setValueAtTime(frekuensi, audioCtx.currentTime);
                 
-                gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durasi);
                 
                 oscillator.connect(gainNode);
@@ -265,25 +265,25 @@
             } catch(e){}
         }
 
-        // VARIASI POLA ALARM BERDASARKAN STATUS JADWAL
-        function bunyikanNadaChimeKomando(tipeStatus) {
+        // POLA NADA CHIME KHUSUS TIAP PERUBAHAN STATUS (Tegas & Jelas)
+        function bunyikanNadaSandiKomando(tipeStatus) {
             if (!audioSistemValid) return;
             try {
                 if (tipeStatus === "berlangsung") {
-                    // Pola Status Berlangsung: Nada Arpeggio Naik (Tegas & Memanggil)
-                    buatSuaraBeepMurni(523.25, 0.2, 'triangle'); // Nada C5
-                    setTimeout(() => buatSuaraBeepMurni(659.25, 0.2, 'triangle'), 150); // Nada E5
-                    setTimeout(() => buatSuaraBeepMurni(783.99, 0.3, 'sine'), 300);    // Nada G5
+                    // Pola Mulai: Arpeggio 3 Nada Naik (Tegas/Perhatian)
+                    buatSuaraBeepMurni(523.25, 0.15, 'triangle'); // C5
+                    setTimeout(() => buatSuaraBeepMurni(659.25, 0.15, 'triangle'), 120); // E5
+                    setTimeout(() => buatSuaraBeepMurni(783.99, 0.25, 'sine'), 240);     // G5
                 } 
                 else if (tipeStatus === "selesai") {
-                    // Pola Status Selesai: Nada Ganda Turun (Pemberitahuan Penutupan)
-                    buatSuardBeepMurni(783.99, 0.15, 'sine'); // Nada G5
-                    setTimeout(() => buatSuaraBeepMurni(523.25, 0.3, 'sine'), 150);   // Nada C5
+                    // Pola Selesai: Nada Ganda Turun (Penutupan)
+                    buatSuaraBeepMurni(783.99, 0.12, 'sine'); // G5
+                    setTimeout(() => buatSuaraBeepMurni(523.25, 0.25, 'sine'), 120);   // C5
                 } 
                 else {
-                    // Pola Default / Pancingan Awal: Beep Ganda Standar
-                    buatSuaraBeepMurni(880, 0.15, 'sine');
-                    setTimeout(() => buatSuaraBeepMurni(880, 0.15, 'sine'), 150);
+                    // Pola Default Pengaktifan: Beep Ganda Standar
+                    buatSuaraBeepMurni(880, 0.1, 'sine');
+                    setTimeout(() => buatSuaraBeepMurni(880, 0.1, 'sine'), 120);
                 }
             } catch(e){}
         }
@@ -466,7 +466,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            bunyikanNadaChimeKomando("selesai"); // BUNYIKAN CHIME SELESAI
+                            bunyikanNadaSandiKomando("selesai"); // Eksekusi Chime Selesai
                         }
                         dataBerubah = true;
                         return false; 
@@ -508,7 +508,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                bunyikanNadaChimeKomando("berlangsung"); // BUNYIKAN CHIME BERLANGSUNG
+                                bunyikanNadaSandiKomando("berlangsung"); // Eksekusi Chime Berlangsung
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
