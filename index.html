@@ -218,6 +218,11 @@
 
                 loadDataFromCloud();
                 setInterval(() => { try { loadDataFromCloud(); } catch(e){} }, 10000);
+                
+                // Pancing inisialisasi suara browser agar siap sedia
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                }
             } catch(e) {
                 console.error("Init Error bypassed.");
             }
@@ -227,8 +232,14 @@
             try {
                 audioSistemValid = true;
                 
-                // Mainkan nada sambutan awal murni
-                bunyikanNadaSandiKomando("mulai");
+                // Bunyikan beep pancingan awal
+                bunyikanBeepDigitalMurni(660, 0.1);
+                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.15), 150);
+
+                // Tes langsung ngomong lokal pas di-klik
+                setTimeout(() => {
+                    eksekusiPengumumanSuara("Sistem audio berhasil diaktifkan.");
+                }, 400);
 
                 const unlocker = document.getElementById('tizenAudioUnlocker');
                 if(unlocker) {
@@ -240,8 +251,7 @@
             }
         }
 
-        // DIGITAL CHIME GENERATOR - Berjalan lokal, bebas pemblokiran CORS internet
-        function buatSuaraBeepMurni(frekuensi, durasi, jenisGelombang = 'sine') {
+        function bunyikanBeepDigitalMurni(frekuensi = 800, durasi = 0.3) {
             if (!audioSistemValid) return;
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -251,11 +261,11 @@
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 
-                oscillator.type = jenisGelombang;
+                oscillator.type = 'sine';
                 oscillator.frequency.setValueAtTime(frekuensi, audioCtx.currentTime);
                 
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durasi);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + durasi);
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
@@ -265,27 +275,40 @@
             } catch(e){}
         }
 
-        // POLA NADA CHIME KHUSUS TIAP PERUBAHAN STATUS (Tegas & Jelas)
-        function bunyikanNadaSandiKomando(tipeStatus) {
+        // PERUBAHAN UTAMA: MENGGUNAKAN NATIVE WEB SPEECH API INTERNAL (100% AMAN & ANTI-BLOKIR)
+        function eksekusiPengumumanSuara(teks) {
             if (!audioSistemValid) return;
             try {
-                if (tipeStatus === "berlangsung") {
-                    // Pola Mulai: Arpeggio 3 Nada Naik (Tegas/Perhatian)
-                    buatSuaraBeepMurni(523.25, 0.15, 'triangle'); // C5
-                    setTimeout(() => buatSuaraBeepMurni(659.25, 0.15, 'triangle'), 120); // E5
-                    setTimeout(() => buatSuaraBeepMurni(783.99, 0.25, 'sine'), 240);     // G5
-                } 
-                else if (tipeStatus === "selesai") {
-                    // Pola Selesai: Nada Ganda Turun (Penutupan)
-                    buatSuaraBeepMurni(783.99, 0.12, 'sine'); // G5
-                    setTimeout(() => buatSuaraBeepMurni(523.25, 0.25, 'sine'), 120);   // C5
-                } 
-                else {
-                    // Pola Default Pengaktifan: Beep Ganda Standar
-                    buatSuaraBeepMurni(880, 0.1, 'sine');
-                    setTimeout(() => buatSuaraBeepMurni(880, 0.1, 'sine'), 120);
-                }
-            } catch(e){}
+                // Semburkan bunyi chime peringatan dulu lewat Web Audio API
+                bunyikanBeepDigitalMurni(880, 0.15);
+                setTimeout(() => bunyikanBeepDigitalMurni(880, 0.25), 200);
+
+                // Eksekusi pembacaan teks bahasa indonesia lokal mesin PC/TV
+                setTimeout(() => {
+                    if ('speechSynthesis' in window) {
+                        // Hentikan antrean suara lama jika menumpuk
+                        window.speechSynthesis.cancel();
+
+                        const sampaikan = new SpeechSynthesisUtterance(teks);
+                        sampaikan.lang = 'id-ID'; // Set Bahasa Indonesia murni
+                        sampaikan.rate = 0.95;    // Kecepatan bicara normal taktis
+                        sampaikan.pitch = 1.0;     // Nada suara normal
+                        sampaikan.volume = 1.0;    // Volume maksimal
+
+                        // Cari opsi suara bahasa Indonesia terpasang di mesin internal jika ada
+                        const daftarSuara = window.speechSynthesis.getVoices();
+                        const suaraIndo = daftarSuara.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
+                        if (suaraIndo) {
+                            sampaikan.voice = suaraIndo;
+                        }
+
+                        window.speechSynthesis.speak(sampaikan);
+                    }
+                }, 700);
+
+            } catch (e) { 
+                console.error("Native Speech API Error bypass executed."); 
+            }
         }
 
         function updateDateTime() {
@@ -466,7 +489,7 @@
                         
                         if (!spokenSchedules.has(`${baseKey}-selesai`)) {
                             spokenSchedules.add(`${baseKey}-selesai`);
-                            bunyikanNadaSandiKomando("selesai"); // Eksekusi Chime Selesai
+                            eksekusiPengumumanSuara(`Informasi, kegiatan ${item.kegiatan || ''} telah selesai.`); 
                         }
                         dataBerubah = true;
                         return false; 
@@ -508,7 +531,7 @@
 
                             if (!spokenSchedules.has(`${baseKey}-berlangsung`)) {
                                 spokenSchedules.add(`${baseKey}-berlangsung`);
-                                bunyikanNadaSandiKomando("berlangsung"); // Eksekusi Chime Berlangsung
+                                eksekusiPengumumanSuara(`Perhatian, kegiatan ${item.kegiatan || ''} di lokasi ${item.lokasi || ''} sedang berlangsung.`);
                             }
                         } else if (infoWaktu.sekarang < infoWaktu.mulai) {
                             badge.textContent = 'Menunggu';
