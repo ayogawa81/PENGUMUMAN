@@ -44,9 +44,10 @@ th { background-color: #0f172a; color: #3b82f6; font-size: 1.4rem; font-weight: 
 td { padding: 22px 25px; font-size: 1.3rem; color: #e2e8f0; border-bottom: 1px solid #334155; vertical-align: middle; }
 tr:nth-child(even) { background-color: #1e293b; }
 tr:nth-child(odd) { background-color: #162238; }
-.col-time { font-weight: bold; color: #f59e0b; width: 25%; }
-.col-event { width: 40%; font-weight: 500; }
-.col-room { width: 20%; color: #cbd5e1; }
+.col-time { font-weight: bold; color: #f59e0b; width: 22%; }
+.col-event { width: 30%; font-weight: 500; }
+.col-personnel { width: 20%; color: #38bdf8; font-weight: 500; }
+.col-room { width: 15%; color: #cbd5e1; }
 .status-badge { display: inline-block; padding: 6px 16px; border-radius: 30px; font-size: 1rem; font-weight: bold; text-transform: uppercase; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 .status-ongoing { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
 .status-waiting { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
@@ -114,14 +115,15 @@ color: white; text-align: center; padding: 20px;
 <table>
 <thead>
 <tr>
-<th style="width: 30%;">Tanggal & Waktu Kegiatan</th>
-<th style="width: 35%;">Nama Kegiatan / Agenda</th>
-<th style="width: 20%;">Lokasi / Ruang</th>
-<th style="width: 15%; text-align: center;">Status</th>
+<th style="width: 22%;">Tanggal & Waktu</th>
+<th style="width: 30%;">Nama Kegiatan / Agenda</th>
+<th style="width: 20%;">Personel / Peserta</th>
+<th style="width: 15%;">Lokasi / Ruang</th>
+<th style="width: 13%; text-align: center;">Status</th>
 </tr>
 </thead>
 <tbody id="main-table-body">
-<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Menghubungkan ke Database Online Global...</td></tr>
+<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Menghubungkan ke Database Online Global...</td></tr>
 </tbody>
 </table>
 </div>
@@ -153,6 +155,10 @@ color: white; text-align: center; padding: 20px;
 <div class="form-group" style="margin-top: 10px;">
 <label for="inputKegiatan">Nama Kegiatan:</label>
 <input type="text" id="inputKegiatan" placeholder="Nama Agenda / Kegiatan Utama">
+</div>
+<div class="form-group">
+<label for="inputPersonel">Personel / Peserta:</label>
+<input type="text" id="inputPersonel" placeholder="Contoh: Direksi, Tim IT, All Staff, dll.">
 </div>
 <div class="form-group">
 <label for="inputLokasi">Lokasi Ruangan:</label>
@@ -343,7 +349,7 @@ mainTbody.innerHTML = '';
 if(managerList) managerList.innerHTML = '';
 
 if (systemSchedules.length === 0) {
-mainTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan saat ini. Klik Setting untuk menambah.</td></tr>`;
+mainTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Tidak ada agenda kegiatan saat ini. Klik Setting untuk menambah.</td></tr>`;
 if (shouldSave) saveDataToCloud();
 return;
 }
@@ -362,12 +368,15 @@ displayTanggal = formatTanggalIndo(item.tglMulai);
 displayTanggal = `${formatTanggalIndo(item.tglMulai)} s/d ${formatTanggalIndo(item.tglSelesai)}`;
 }
 
+const personelInfo = item.personel || '-';
+
 tr.innerHTML = `
 <td class="col-time">
 <div style="font-size:0.95rem; color:#94a3b8; font-weight:normal; margin-bottom:3px;">${displayTanggal}</div>
 <div>${item.waktu}</div>
 </td>
 <td class="col-event">${item.kegiatan}</td>
+<td class="col-personnel">${personelInfo}</td>
 <td class="col-room">${item.lokasi}</td>
 <td style="text-align: center;"><span class="status-badge">Memuat...</span></td>
 `;
@@ -379,7 +388,7 @@ managerItem.className = 'manager-item';
 managerItem.innerHTML = `
 <div class="manager-item-text">
 <small style="color:#f59e0b;">${displayTanggal} | ${item.waktu}</small><br>
-<strong>${item.kegiatan}</strong> (${item.lokasi})
+<strong>${item.kegiatan}</strong> [${personelInfo}] (${item.lokasi})
 </div>
 <div style="display: flex; gap: 5px;">
 <button onclick="isiFormEdit(${index})" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Edit</button>
@@ -400,6 +409,7 @@ document.getElementById('inputTglMulai').value = item.tglMulai || '';
 document.getElementById('inputTglSelesai').value = item.tglSelesai || item.tglMulai || '';
 document.getElementById('inputWaktu').value = item.waktu || '';
 document.getElementById('inputKegiatan').value = item.kegiatan || '';
+document.getElementById('inputPersonel').value = item.personel || '';
 document.getElementById('inputLokasi').value = item.lokasi || '';
 
 editIndex = index;
@@ -413,6 +423,7 @@ const tglMulai = document.getElementById('inputTglMulai').value;
 const tglSelesai = document.getElementById('inputTglSelesai').value;
 const waktu = document.getElementById('inputWaktu').value.trim();
 const kegiatan = document.getElementById('inputKegiatan').value.trim();
+const personel = document.getElementById('inputPersonel').value.trim();
 const lokasi = document.getElementById('inputLokasi').value.trim();
 
 if (!tglMulai || !tglSelesai || !waktu || !kegiatan || !lokasi || !waktu.includes('-')) {
@@ -427,7 +438,7 @@ const btnAdd = document.getElementById('btnAdd');
 btnAdd.disabled = true;
 
 if (editIndex === -1) {
-systemSchedules.push({ tglMulai, tglSelesai, waktu, kegiatan, lokasi });
+systemSchedules.push({ tglMulai, tglSelesai, waktu, kegiatan, personel, lokasi });
 } else {
 const oldItem = systemSchedules[editIndex];
 const oldKey = `${oldItem.tglMulai}-${oldItem.tglSelesai}-${oldItem.waktu.replace(/\s+/g, '')}-${oldItem.kegiatan}`;
@@ -436,7 +447,7 @@ spokenSchedules.delete(`${oldKey}-menunggu`);
 spokenSchedules.delete(`${oldKey}-berlangsung`);
 spokenSchedules.delete(`${oldKey}-selesai`);
 
-systemSchedules[editIndex] = { tglMulai, tglSelesai, waktu, kegiatan, lokasi };
+systemSchedules[editIndex] = { tglMulai, tglSelesai, waktu, kegiatan, personel, lokasi };
 editIndex = -1;
 btnAdd.textContent = "＋ Tambahkan ke Semua Layar";
 btnAdd.style.backgroundColor = "#10b981";
@@ -448,6 +459,7 @@ document.getElementById('inputTglMulai').value = '';
 document.getElementById('inputTglSelesai').value = '';
 document.getElementById('inputWaktu').value = '';
 document.getElementById('inputKegiatan').value = '';
+document.getElementById('inputPersonel').value = '';
 document.getElementById('inputLokasi').value = '';
 btnAdd.disabled = false;
 }
@@ -463,6 +475,7 @@ document.getElementById('inputTglMulai').value = '';
 document.getElementById('inputTglSelesai').value = '';
 document.getElementById('inputWaktu').value = '';
 document.getElementById('inputKegiatan').value = '';
+document.getElementById('inputPersonel').value = '';
 document.getElementById('inputLokasi').value = '';
 }
 systemSchedules.splice(index, 1);
@@ -482,6 +495,7 @@ const endDateStr = row.getAttribute('data-end-date');
 if (!timeRange || !timeRange.includes('-') || !startDateStr || !endDateStr) return;
 
 const eventName = row.querySelector('.col-event').textContent || '';
+const personnelName = row.querySelector('.col-personnel').textContent || '';
 const roomName = row.querySelector('.col-room').textContent || '';
 const badge = row.querySelector('.status-badge');
 if (!badge) return;
@@ -503,6 +517,8 @@ const waktuSelesaiLengkap = new Date(endDateStr).setHours(jamSelesai, menitSeles
 badge.className = 'status-badge';
 const baseKey = `${startDateStr}-${endDateStr}-${timeRange}-${eventName}`;
 
+let appendPesertaText = (personnelName && personnelName !== '-') ? ` bersama ${personnelName}` : '';
+
 if (waktuSekarangLengkap > waktuSelesaiLengkap) {
 badge.textContent = 'Selesai';
 badge.className = 'status-badge status-done';
@@ -511,7 +527,7 @@ const keySelesai = `${baseKey}-selesai`;
 if (!spokenSchedules.has(keySelesai)) {
 spokenSchedules.add(keySelesai);
 playBeepSound(() => {
-panggilSuaraAI(`Informasi, kegiatan ${eventName} di lokasi ${roomName} telah selesai.`);
+panggilSuaraAI(`Informasi, kegiatan ${eventName}${appendPesertaText} di lokasi ${roomName} telah selesai.`);
 });
 }
 
@@ -523,7 +539,7 @@ const keyBerlangsung = `${baseKey}-berlangsung`;
 if (!spokenSchedules.has(keyBerlangsung)) {
 spokenSchedules.add(keyBerlangsung);
 playBeepSound(() => {
-panggilSuaraAI(`Perhatian, kegiatan ${eventName} di lokasi ${roomName} sedang berlangsung.`);
+panggilSuaraAI(`Perhatian, kegiatan ${eventName}${appendPesertaText} di lokasi ${roomName} sedang berlangsung.`);
 });
 }
 
@@ -535,7 +551,7 @@ const keyMenunggu = `${baseKey}-menunggu`;
 if (!spokenSchedules.has(keyMenunggu)) {
 spokenSchedules.add(keyMenunggu);
 playBeepSound(() => {
-panggilSuaraAI(`Pemberitahuan, kegiatan ${eventName} di lokasi ${roomName} dalam status menunggu.`);
+panggilSuaraAI(`Pemberitahuan, kegiatan ${eventName}${appendPesertaText} di lokasi ${roomName} dalam status menunggu.`);
 });
 }
 }
@@ -556,6 +572,7 @@ document.getElementById('inputTglMulai').value = '';
 document.getElementById('inputTglSelesai').value = '';
 document.getElementById('inputWaktu').value = '';
 document.getElementById('inputKegiatan').value = '';
+document.getElementById('inputPersonel').value = '';
 document.getElementById('inputLokasi').value = '';
 }
 document.getElementById('settingModal').classList.toggle('active', show);
